@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as authController from "../controllers/auth.controller";
+import * as authmiddleware from "../middleware/auth.middleware";
 
 const authRouter = Router();
 
@@ -29,7 +30,10 @@ authRouter.get("/logout", authController.logoutUserController);
  * @description Get the currently logged in user's information
  * @access Private
  */
-authRouter.get("/get-me", authController.getMeController);
-
+authRouter.get(
+  "/get-me",
+  authmiddleware.authoriseUser,
+  authController.getMeController,
+);
 
 export default authRouter;

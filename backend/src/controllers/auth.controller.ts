@@ -163,5 +163,30 @@ async function logoutUserController(req: Request, res: Response) {
  * @description Get the currently logged in user's information
  * @access Private
  */
+async function getMeController(req: Request, res: Response) {
+  const user = await prisma.user.findFirst({
+    where: {
+      id: req.user?.id,
+    },
+  });
+  if (!user) {
+    return res.status(400).json({
+      message: "Unable to find the user",
+    });
+  }
+  res.status(200).json({
+    message: "User details fetched successfully",
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    },
+  });
+}
 
-export { registerUserController, loginUserController, logoutUserController };
+export {
+  registerUserController,
+  loginUserController,
+  logoutUserController,
+  getMeController,
+};
