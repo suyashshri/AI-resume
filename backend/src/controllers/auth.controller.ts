@@ -1,16 +1,17 @@
 import type { Request, Response } from "express";
 import { LoginUser, RegisterUser } from "../types/auth.type";
-import prisma from "../db/db";
+import prisma from "../db/singleton";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { config } from "../config/config";
+import redisClient from "../db/redis";
 
 /**
  * @name resgisterUserController
  * @description Register a new user, using username,email and password
  * @access Public
  */
-async function registerUser(req: Request, res: Response) {
+async function registerUserController(req: Request, res: Response) {
   const data = req.body;
   const parsedData = RegisterUser.safeParse(data);
 
@@ -72,7 +73,7 @@ async function registerUser(req: Request, res: Response) {
  * @description Login a user using email and password
  * @access Public
  */
-async function loginUser(req: Request, res: Response) {
+async function loginUserController(req: Request, res: Response) {
   const data = req.body;
   const parsedData = LoginUser.safeParse(data);
 
@@ -128,4 +129,39 @@ async function loginUser(req: Request, res: Response) {
   });
 }
 
-export { registerUser, loginUser };
+/**
+ *  @name logoutUserController
+ *  @description Logout a user by clearing the token cookie
+ *  @access Public
+ */
+async function logoutUserController(req: Request, res: Response) {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(400).json({
+      message: "Missing Token",
+    });
+  }
+
+  const decoded = jwt.decode(token) as { exp: number };
+
+  const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+
+  await redisClient.set(token, "blacklisted", {
+    expiration: { type: "EX", value: ttl },
+  });
+
+  res.clearCookie("token");
+
+  res.status(201).json({
+    message: "User logged out successfully",
+  });
+}
+
+/**
+ * @name getMeController
+ * @description Get the currently logged in user's information
+ * @access Private
+ */
+
+export { registerUserController, loginUserController, logoutUserController };
