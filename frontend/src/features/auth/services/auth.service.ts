@@ -25,3 +25,21 @@ export async function register({
     console.log("Error while Registering the user:", error);
   }
 }
+
+export async function login({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) {
+  try {
+    const response = await api.post("/api/auth/login", {
+      email,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("Error while loging the user:", error);
+  }
+}
