@@ -7,7 +7,15 @@ export const useAuth = () => {
   if (!context) {
     throw new Error("useAuth must be used within AuthProvider");
   }
-  const { user, setUser, loading, setLoading } = context;
+  const {
+    isAuthenticated,
+    user,
+    setUser,
+    loading,
+    setLoading,
+    error,
+    setError,
+  } = context;
 
   const handleRegister = async ({
     username,
@@ -21,9 +29,11 @@ export const useAuth = () => {
     setLoading(true);
     try {
       const data = await register({ username, email, password });
+      setError(null);
       setUser(data.user);
     } catch (error) {
       console.log("Error while Registering the user:", error);
+      setError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
@@ -39,13 +49,15 @@ export const useAuth = () => {
     setLoading(true);
     try {
       const data = await login({ email, password });
+      setError(null);
       setUser(data.user);
     } catch (error) {
       console.log("Error while Registering the user:", error);
+      setError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
   };
 
-  return { user, loading, handleRegister, handleLogin };
+  return { isAuthenticated, user, loading, handleRegister, handleLogin, error };
 };

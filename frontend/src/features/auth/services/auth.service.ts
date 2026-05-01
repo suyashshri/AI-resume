@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 const api = axios.create({
   baseURL: "http://localhost:3000",
@@ -20,9 +20,14 @@ export async function register({
       email,
       password,
     });
+    console.log("response:", response.status);
     return response.data;
   } catch (error) {
-    console.log("Error while Registering the user:", error);
+    const message =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (((error as AxiosError).response?.data as any)?.message as string) ||
+      "Registration failed";
+    throw new Error(message);
   }
 }
 
@@ -40,6 +45,11 @@ export async function login({
     });
     return response.data;
   } catch (error) {
-    console.log("Error while loging the user:", error);
+    const message =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (((error as AxiosError).response?.data as any)?.message as string) ||
+      "Login failed";
+
+    throw new Error(message);
   }
 }

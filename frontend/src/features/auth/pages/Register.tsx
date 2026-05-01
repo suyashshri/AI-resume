@@ -7,25 +7,17 @@ const Register = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { loading, handleRegister } = useAuth();
+  const { loading, handleRegister, error } = useAuth();
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       await handleRegister({ username, email, password });
-      navigate({ to: "/login" });
+      navigate({ to: "/dashboard" });
     } catch (error) {
       console.log("Error while registering: ", error);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-50">
-        <div className="loader" />
-      </div>
-    );
-  }
 
   return (
     <main className="min-h-screen flex flex-col justify-between w-full bg-background text-slate-900 overflow-hidden">
@@ -137,8 +129,16 @@ const Register = () => {
                     </span>
                   </div>
                 </div>
-
-                <button className="btn-primary mt-2">Get Started</button>
+                {error && <div className="text-red-600 text-md">{error}</div>}
+                <button className="btn-primary mt-2">
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="loader" />
+                    </div>
+                  ) : (
+                    "Get Started"
+                  )}
+                </button>
               </form>
 
               <div className="footer-text text-center">

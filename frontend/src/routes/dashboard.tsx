@@ -1,9 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import Landing from "../features/landing/pages/Landing";
 
 export const Route = createFileRoute("/dashboard")({
-  component: RouteComponent,
+  beforeLoad: ({ context }) => {
+    if (!context.auth.isAuthenticated) {
+      throw redirect({
+        to: "/login",
+      });
+    }
+  },
+  component: Landing,
 });
-
-function RouteComponent() {
-  return <div>Hello "/dashboard"!</div>;
-}
