@@ -13,6 +13,10 @@ async function uploadResumeController(req: Request, res: Response) {
   const userId = req.user?.id;
   const storagePath = `${userId}/${Date.now()}-${file.originalname}`;
 
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthenticated Request" });
+  }
+
   // Extract text from PDF
   const buffer = new Uint8Array(file.buffer);
   const pdf = await getDocumentProxy(buffer);
@@ -45,3 +49,81 @@ async function uploadResumeController(req: Request, res: Response) {
     },
   });
 }
+
+async function getResumesController(req: Request, res: Response) {
+  const userId = req.user!.id;
+
+  const resumes = await prisma.resume.findMany({
+    where: { userId },
+    select: { id: true, resumeUrl: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return res.status(200).json({
+    message: "Resumes fetched successfully",
+    resumes,
+  });
+}
+
+async function getResumeByIdController(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ message: "Please share the id" });
+  }
+
+  const resume = await prisma.resume.findFirst({
+    where: { id, userId },
+  });
+
+  if (!resume) {
+    return res.status(404).json({ message: "Resume not found" });
+  }
+
+  // Generate a signed URL valid for 1 hour
+  const { data, error } = await supabase.storage
+    .from("resumes")
+    .createSignedUrl(resume.resumeUrl!, 3600);
+
+  if (error || !data) {
+    return res.status(500).json({ message: "Failed to generate file URL" });
+  }
+
+  return res.status(200).json({
+    message: "Resume fetched successfully",
+    resume: {
+      id: resume.id,
+      signedUrl: data.signedUrl,
+      createdAt: resume.createdAt,
+    },
+  });
+}
+
+async function deleteResumeController(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  const resume = await prisma.resume.findFirst({
+    where: { id, userId },
+  });
+
+  if (!resume) {
+    return res.status(404).json({ message: "Resume not found" });
+  }
+
+  if (resume.resumeUrl) {
+    await supabase.storage.from("resumes").remove([resume.resumeUrl]);
+  }
+
+  await prisma.resume.delete({ where: { id } });
+
+  return res.status(200).json({ message: "Resume deleted successfully" });
+}
+
+export {
+  uploadResumeController,
+  getResumesController,
+  getResumeByIdController,
+  deleteResumeController,
+};
