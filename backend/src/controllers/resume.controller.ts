@@ -70,7 +70,7 @@ async function getResumeByIdController(req: Request, res: Response) {
   const { id } = req.params;
 
   if (!id || Array.isArray(id)) {
-    return res.status(400).json({ message: "Please share the id" });
+    return res.status(400).json({ message: "Please share valid id" });
   }
 
   const resume = await prisma.resume.findFirst({
@@ -81,10 +81,10 @@ async function getResumeByIdController(req: Request, res: Response) {
     return res.status(404).json({ message: "Resume not found" });
   }
 
-  // Generate a signed URL valid for 1 hour
+  // Generate a signed URL valid for 5 mint
   const { data, error } = await supabase.storage
     .from("resumes")
-    .createSignedUrl(resume.resumeUrl!, 3600);
+    .createSignedUrl(resume.resumeUrl!, 300);
 
   if (error || !data) {
     return res.status(500).json({ message: "Failed to generate file URL" });
@@ -103,6 +103,10 @@ async function getResumeByIdController(req: Request, res: Response) {
 async function deleteResumeController(req: Request, res: Response) {
   const userId = req.user!.id;
   const { id } = req.params;
+
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ message: "Please share valid id" });
+  }
 
   const resume = await prisma.resume.findFirst({
     where: { id, userId },
