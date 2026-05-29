@@ -22,15 +22,17 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "@trpc/server": "^11.16.0",
+    "@supabase/supabase-js": "^2.106.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "pg": "^8.20.0",
     "redis": "^5.12.1",
+    "unpdf": "^1.6.2",
     "zod": "^4.3.6"
   }
 }

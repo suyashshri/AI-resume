@@ -13,8 +13,78 @@ datasource db {
 }
 
 model User {
-  id       String @id @unique @default(cuid())
-  username String @unique
-  email    String @unique
-  password String
+  id        String   @id @unique @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  jobs      Job[]
+  resumes   Resume[]
+  reports   Report[]
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id              String   @id @unique @default(cuid())
+  title           String?
+  company         String?
+  selfDescription String?
+  jobDescription  String?
+  jobUrl          String?
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  reports         Report[]
+  createdAt       DateTime @default(now())
+}
+
+model Resume {
+  id        String   @id @unique @default(cuid())
+  content   String
+  resumeUrl String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  reports   Report[]
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id     String @id @unique @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id])
+
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id])
+
+  score   Int
+  summary String?
+
+  skillGaps SkillGap[]
+  questions TechnicalQuestion[]
+
+  createdAt DateTime @default(now())
+}
+
+model TechnicalQuestion {
+  id        String @id @unique @default(cuid())
+  question  String
+  intention String
+  answer    String
+  report    Report @relation(fields: [reportId], references: [id])
+  reportId  String
+}
+
+model SkillGap {
+  id       String   @id @unique @default(cuid())
+  skill    String
+  severity Severity
+  report   Report   @relation(fields: [reportId], references: [id])
+  reportId String
+}
+
+enum Severity {
+  Low
+  Medium
+  High
 }
