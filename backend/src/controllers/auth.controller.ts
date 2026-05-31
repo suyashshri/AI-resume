@@ -96,7 +96,7 @@ async function loginUserController(req: Request, res: Response) {
     });
   }
 
-  const isValidPassword = bcrypt.compare(password, user.password);
+  const isValidPassword = await bcrypt.compare(password, user.password);
   if (!isValidPassword) {
     return res.status(403).json({
       message: "Please enter a valid email and password",
