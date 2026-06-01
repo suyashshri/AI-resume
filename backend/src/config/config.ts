@@ -32,6 +32,10 @@ if (!process.env.FIRECRAWL_API_KEY) {
   throw new Error("FIRECRAWL_API_KEY is not defined in environment variables");
 }
 
+if (!process.env.OPENROUTER_API_KEY) {
+  throw new Error("OPENROUTER_API_KEY is not defined in environment variables");
+}
+
 export const config = {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
@@ -41,4 +45,5 @@ export const config = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 };
