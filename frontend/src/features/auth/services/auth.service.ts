@@ -53,3 +53,12 @@ export async function login({
     throw new Error(message);
   }
 }
+
+export async function getMe() {
+  try {
+    const response = await api.get("/api/auth/me");
+    return response.data;
+  } catch {
+    return null;
+  }
+}

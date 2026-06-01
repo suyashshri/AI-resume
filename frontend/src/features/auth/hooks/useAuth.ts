@@ -33,7 +33,9 @@ export const useAuth = () => {
       setUser(data.user);
     } catch (error) {
       console.log("Error while Registering the user:", error);
-      setError(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }

@@ -10,6 +10,7 @@ const router = createRouter({
   routeTree,
   context: {
     auth: {
+      isAuthenticated: false,
       user: null,
     },
   },
