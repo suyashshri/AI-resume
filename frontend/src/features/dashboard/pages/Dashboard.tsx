@@ -64,6 +64,8 @@ const Dashboard = () => {
   const [jobDescription, setJobDescription] = useState("");
   const [jobUrl, setJobUrl] = useState("");
 
+  const [isLinkedInUrl, setIsLinkedInUrl] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -196,12 +198,25 @@ const Dashboard = () => {
         )}
 
         <div className="grid lg:grid-cols-3 gap-6 items-start">
-          {/* ── RESUMES ── */}
+          {/* ── STEP 1: RESUMES ── */}
           <section className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-lg">My Resumes</h2>
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center
+  justify-center shrink-0"
+                  >
+                    1
+                  </span>
+                  <h2 className="font-bold text-lg">Pick a Resume</h2>
+                </div>
+                <p className="text-xs text-muted-foreground pl-8">
+                  Click a resume to select it for analysis
+                </p>
+              </div>
               <label
-                className="cursor-pointer text-sm font-semibold px-4 py-1.5 rounded-full text-white"
+                className="cursor-pointer text-sm font-semibold px-4 py-1.5 rounded-full text-white shrink-0"
                 style={{ backgroundColor: "var(--color-primary)" }}
               >
                 {uploadingResume ? <div className="loader" /> : "+ Upload"}
@@ -237,6 +252,16 @@ const Dashboard = () => {
   }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center
+  transition-colors ${
+    isSelected ? "border-primary bg-primary" : "border-muted"
+  }`}
+                        >
+                          {isSelected && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
                         <span className="text-xl shrink-0">📄</span>
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">
@@ -264,13 +289,26 @@ const Dashboard = () => {
             )}
           </section>
 
-          {/* ── JOBS ── */}
+          {/* ── STEP 2: JOBS ── */}
           <section className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-lg">Job Descriptions</h2>
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center
+  justify-center shrink-0"
+                  >
+                    2
+                  </span>
+                  <h2 className="font-bold text-lg">Pick a Job</h2>
+                </div>
+                <p className="text-xs text-muted-foreground pl-8">
+                  Click a job to select it for analysis
+                </p>
+              </div>
               <button
                 onClick={() => setShowJobForm((v) => !v)}
-                className="text-sm font-semibold px-4 py-1.5 rounded-full text-white"
+                className="text-sm font-semibold px-4 py-1.5 rounded-full text-white shrink-0"
                 style={{ backgroundColor: "var(--color-primary)" }}
               >
                 {showJobForm ? "Cancel" : "+ Add Job"}
@@ -343,16 +381,47 @@ const Dashboard = () => {
                       className="input text-sm"
                       type="url"
                       value={jobUrl}
-                      onChange={(e) => setJobUrl(e.target.value)}
+                      onChange={(e) => {
+                        setJobUrl(e.target.value);
+                        setIsLinkedInUrl(
+                          e.target.value.includes("linkedin.com") ||
+                            e.target.value.includes("indeed.com") ||
+                            e.target.value.includes("glassdoor.com"),
+                        );
+                      }}
                       placeholder="https://jobs.lever.co/..."
                       required
                     />
+                    {isLinkedInUrl && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 space-y-2 mt-2">
+                        <p className="text-xs text-yellow-700 font-semibold">
+                          ⚠ LinkedIn, Indeed and Glassdoor require a login to
+                          access — they can't be scraped.
+                        </p>
+                        <p className="text-xs text-yellow-600">
+                          Open the job posting, copy the full description, and
+                          paste it using the{" "}
+                          <button
+                            type="button"
+                            className="font-bold underline"
+                            onClick={() => {
+                              setJobInputType("text");
+                              setJobUrl("");
+                              setIsLinkedInUrl(false);
+                            }}
+                          >
+                            Paste Text
+                          </button>{" "}
+                          tab instead.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <button
                   className="btn-primary rounded-xl py-2 text-sm"
-                  disabled={addingJob}
+                  disabled={addingJob || isLinkedInUrl}
                 >
                   {addingJob ? (
                     <div className="flex items-center justify-center">
@@ -387,7 +456,17 @@ const Dashboard = () => {
   }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="text  shrink-0">💼</span>
+                        <div
+                          className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center
+  transition-colors ${
+    isSelected ? "border-primary bg-primary" : "border-muted"
+  }`}
+                        >
+                          {isSelected && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span className="text-xl shrink-0">💼</span>
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">
                             {job.title ?? "Untitled Job"}
@@ -403,7 +482,8 @@ const Dashboard = () => {
                           e.stopPropagation();
                           handleDeleteJob(job.id);
                         }}
-                        className="text-muted-foreground hover:text-red-500 transition-colors text-xs px-2 py-1 shrink-0"
+                        className="text-muted-foreground hover:text-red-500 transition-colors text-xs px-2 py-1
+  shrink-0"
                       >
                         ✕
                       </button>
@@ -414,55 +494,87 @@ const Dashboard = () => {
             )}
           </section>
 
-          {/* ── ANALYZE + PAST REPORTS ── */}
+          {/* ── STEP 3: ANALYZE + PAST REPORTS ── */}
           <section className="space-y-6">
             <div className="card space-y-4">
-              <h2 className="font-bold text-lg">Analyze</h2>
-
-              <div
-                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                  selectedResumeId
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-surface"
-                }`}
-              >
-                <span className="text-lg">📄</span>
-                <span className="text-sm truncate">
-                  {selectedResumeId ? (
-                    resumeLabel(
-                      resumes.find((r) => r.id === selectedResumeId)
-                        ?.resumeUrl ?? "",
-                    )
-                  ) : (
-                    <span className="text-muted-foreground">
-                      No resume selected
-                    </span>
-                  )}
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center
+  justify-center shrink-0"
+                >
+                  3
                 </span>
+                <h2 className="font-bold text-lg">Generate Report</h2>
               </div>
 
-              <div
-                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                  selectedJobId
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-surface"
-                }`}
-              >
-                <span className="text-lg">💼</span>
-                <span className="text-sm truncate">
-                  {selectedJobId ? (
-                    (jobs.find((j) => j.id === selectedJobId)?.title ??
-                    "Untitled Job")
-                  ) : (
-                    <span className="text-muted-foreground">
-                      No job selected
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                  Selected Resume
+                </p>
+                <div
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                    selectedResumeId
+                      ? "border-primary bg-primary/5"
+                      : "border-dashed border-border bg-surface"
+                  }`}
+                >
+                  <span className="text-lg">📄</span>
+                  <span className="text-sm truncate flex-1">
+                    {selectedResumeId ? (
+                      <span className="font-medium">
+                        {resumeLabel(
+                          resumes.find((r) => r.id === selectedResumeId)
+                            ?.resumeUrl ?? "",
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic">
+                        ← Select a resume from Step 1
+                      </span>
+                    )}
+                  </span>
+                  {selectedResumeId && (
+                    <span className="text-xs text-primary font-bold shrink-0">
+                      ✓
                     </span>
                   )}
-                </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                  Selected Job
+                </p>
+                <div
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                    selectedJobId
+                      ? "border-primary bg-primary/5"
+                      : "border-dashed border-border bg-surface"
+                  }`}
+                >
+                  <span className="text-lg">💼</span>
+                  <span className="text-sm truncate flex-1">
+                    {selectedJobId ? (
+                      <span className="font-medium">
+                        {jobs.find((j) => j.id === selectedJobId)?.title ??
+                          "Untitled Job"}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic">
+                        ← Select a job from Step 2
+                      </span>
+                    )}
+                  </span>
+                  {selectedJobId && (
+                    <span className="text-xs text-primary font-bold shrink-0">
+                      ✓
+                    </span>
+                  )}
+                </div>
               </div>
 
               <button
-                className="btn-primary rounded-xl py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary rounded-xl py-3 disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={!selectedResumeId || !selectedJobId || analyzing}
                 onClick={handleAnalyze}
               >
@@ -475,12 +587,6 @@ const Dashboard = () => {
                   "Generate Report →"
                 )}
               </button>
-
-              {(!selectedResumeId || !selectedJobId) && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Select a resume and a job to generate your analysis
-                </p>
-              )}
             </div>
 
             {/* Past Reports */}
@@ -501,14 +607,14 @@ const Dashboard = () => {
                           params: { reportId: report.id },
                         })
                       }
-                      className="flex items-center justify-between p-3 rounded-xl border border-border
-  hover:bg-surface cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-3 rounded-xl border border-border hover:bg-surface cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center  shrink-0"
+                          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                           style={{
-                            background: `conic-gradient(var(--color-primary) ${report.score}%, var(--color-border) 0)`,
+                            background: `conic-gradient(var(--color-primary) ${report.score}%, var(--color-border)
+  0)`,
                           }}
                         >
                           <div className="w-7 h-7 rounded-full bg-card flex items-center justify-center">
@@ -529,7 +635,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                       </div>
-                      <span className="text-primary text shrink-0">→</span>
+                      <span className="text-primary text-sm shrink-0">→</span>
                     </div>
                   ))}
                 </div>

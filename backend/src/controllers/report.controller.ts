@@ -57,9 +57,13 @@ async function createReportController(req: Request, res: Response) {
 
   const raw = completion.choices[0]?.message.content ?? "";
 
+  const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonString = (jsonMatch?.[1] ?? raw).trim();
+
   let analysisData;
   try {
-    analysisData = ClaudeReport.parse(JSON.parse(raw));
+    analysisData = ClaudeReport.parse(JSON.parse(jsonString));
+    console.log("analysisData:", analysisData);
   } catch {
     return res.status(500).json({ message: "Failed to parse AI response" });
   }

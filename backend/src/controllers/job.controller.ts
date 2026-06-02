@@ -19,8 +19,11 @@ async function createJobController(req: Request, res: Response) {
   if (jobUrl && !description) {
     const result = await firecrawl.scrape(jobUrl, { formats: ["markdown"] });
 
-    if (!result || !result.markdown) {
-      return res.status(422).json({ message: "Failed to scrape job URL" });
+    if (!result || !result.markdown || result.markdown.trim().length < 100) {
+      return res.status(422).json({
+        message:
+          "Could not scrape this URL. The site may require a login (LinkedIn, Indeed, Glassdoor) or block automated access. Please paste the job description as text instead.",
+      });
     }
 
     description = result.markdown;
