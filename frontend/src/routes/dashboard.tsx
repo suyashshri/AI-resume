@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import Landing from "../features/landing/pages/Landing";
+import Dashboard from "../features/dashboard/pages/Dashboard";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: ({ context }) => {
@@ -9,5 +9,5 @@ export const Route = createFileRoute("/dashboard")({
       });
     }
   },
-  component: Landing,
+  component: Dashboard,
 });

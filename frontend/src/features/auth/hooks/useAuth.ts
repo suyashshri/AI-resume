@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { AuthContext } from "../contexts/auth.context";
-import { login, register } from "../services/auth.service";
+import { login, register, logout } from "../services/auth.service";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -55,11 +55,27 @@ export const useAuth = () => {
       setUser(data.user);
     } catch (error) {
       console.log("Error while Registering the user:", error);
-      setError(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  return { isAuthenticated, user, loading, handleRegister, handleLogin, error };
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    setError(null);
+  };
+
+  return {
+    isAuthenticated,
+    user,
+    loading,
+    handleRegister,
+    handleLogin,
+    handleLogout,
+    error,
+  };
 };
