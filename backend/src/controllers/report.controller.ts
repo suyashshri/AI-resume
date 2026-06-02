@@ -134,8 +134,170 @@ async function getReportByIdController(req: Request, res: Response) {
     .json({ message: "Report fetched successfully", report });
 }
 
+async function enhanceResumeController(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ message: "Please share valid id" });
+  }
+
+  const report = await prisma.report.findFirst({
+    where: { id, userId },
+    include: {
+      resume: true,
+      job: true,
+      skillGaps: true,
+    },
+  });
+
+  if (!report) {
+    return res.status(404).json({ message: "Report not found" });
+  }
+
+  const skillGapsList = report.skillGaps
+    .map((g) => `- ${g.skill} (${g.severity} priority)`)
+    .join("\n");
+
+  const prompt = `You are a professional resume writer. Below is a candidate's original resume and a list of skills
+  they are missing for their target role.
+
+  Your task is to produce an enhanced version of the resume that:
+  1. Adds the missing skills naturally into the Skills or Technical Skills section
+  2. Where genuinely plausible, subtly incorporates missing technologies into existing project or experience bullet
+  points
+  3. Does NOT invent new job titles, companies, degrees, or dates that are not already present
+  4. Keeps the same overall structure, format and tone as the original
+  5. Returns ONLY the enhanced resume text — no commentary, no code fences, no explanations
+
+  ORIGINAL RESUME:
+  ${report.resume.content}
+
+  MISSING SKILLS TO INCORPORATE:
+  ${skillGapsList}`;
+
+  const completion = await openrouter.chat.completions.create({
+    model: "anthropic/claude-sonnet-4-5",
+    max_tokens: 3000,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const enhancedResume = completion.choices[0]?.message.content?.trim() ?? "";
+
+  if (!enhancedResume) {
+    return res
+      .status(500)
+      .json({ message: "Failed to generate enhanced resume" });
+  }
+
+  return res.status(200).json({
+    message: "Enhanced resume generated successfully",
+    enhancedResume,
+  });
+}
+
+async function generateTexResumeController(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ message: "Please share valid id" });
+  }
+
+  const report = await prisma.report.findFirst({
+    where: { id, userId },
+    include: { resume: true, job: true, skillGaps: true },
+  });
+
+  if (!report) {
+    return res.status(404).json({ message: "Report not found" });
+  }
+
+  const skillGapsList = report.skillGaps
+    .map((g) => `- ${g.skill} (${g.severity} priority)`)
+    .join("\n");
+
+  const prompt = `You are a LaTeX expert and professional resume writer. Below is a candidate's resume and a
+  list of skills they are missing.
+
+  Your task:
+  1. Produce a complete, compilable ATS-friendly LaTeX resume using the template structure below
+  2. Incorporate the missing skills naturally into the appropriate sections
+  3. Do NOT invent new jobs, companies, degrees, or dates
+  4. Escape ALL special LaTeX characters: & % $ # _ { } ~ ^ \\
+  5. Return ONLY the raw .tex file content — no explanation, no markdown fences
+
+  Use this exact template structure:
+
+  \\documentclass[letterpaper,11pt]{article}
+  \\usepackage{latexsym}
+  \\usepackage[empty]{fullpage}
+  \\usepackage{titlesec}
+  \\usepackage[usenames,dvipsnames]{color}
+  \\usepackage{enumitem}
+  \\usepackage[hidelinks]{hyperref}
+  \\usepackage[english]{babel}
+  \\usepackage{geometry}
+  \\geometry{left=0.5in,right=0.5in,top=0.5in,bottom=0.5in}
+  \\raggedbottom
+  \\raggedright
+  \\titleformat{\\section}{\\vspace{-4pt}\\scshape\\raggedright\\large}{}{0em}{}[\\color{black}\\titlerule\\vs
+  pace{-5pt}]
+  \\newcommand{\\resumeItem}[1]{\\item\\small{#1 \\vspace{-2pt}}}
+  \\newcommand{\\resumeSubheading}[4]{
+    \\vspace{-2pt}\\item
+    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
+      \\textbf{#1} & #2 \\\\
+      \\textit{\\small#3} & \\textit{\\small #4} \\\\
+    \\end{tabular*}\\vspace{-7pt}
+  }
+  \\newcommand{\\resumeProjectHeading}[2]{
+    \\item
+    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}
+      \\small#1 & #2 \\\\
+    \\end{tabular*}\\vspace{-7pt}
+  }
+  \\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.15in, label={}]}
+  \\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}
+  \\newcommand{\\resumeItemListStart}{\\begin{itemize}}
+  \\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-5pt}}
+
+  \\begin{document}
+  % --- FILL IN THE RESUME CONTENT HERE ---
+  \\end{document}
+
+  ORIGINAL RESUME:
+  ${report.resume.content}
+
+  MISSING SKILLS TO INCORPORATE:
+  ${skillGapsList}`;
+
+  const completion = await openrouter.chat.completions.create({
+    model: "anthropic/claude-sonnet-4-5",
+    max_tokens: 4000,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const raw = completion.choices[0]?.message.content?.trim() ?? "";
+
+  // Strip markdown fences if the model wrapped the output
+  const jsonMatch = raw.match(/```(?:latex|tex)?\s*([\s\S]*?)```/);
+  const texContent = (jsonMatch?.[1] ?? raw).trim();
+
+  if (!texContent) {
+    return res.status(500).json({ message: "Failed to generate LaTeX resume" });
+  }
+
+  return res.status(200).json({
+    message: "LaTeX resume generated successfully",
+    texContent,
+  });
+}
+
 export {
   createReportController,
   getReportsController,
   getReportByIdController,
+  enhanceResumeController,
+  generateTexResumeController,
 };

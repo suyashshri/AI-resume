@@ -4,6 +4,8 @@ import {
   createReportController,
   getReportsController,
   getReportByIdController,
+  enhanceResumeController,
+  generateTexResumeController,
 } from "../controllers/report.controller";
 
 const reportRouter = Router();
@@ -11,5 +13,11 @@ const reportRouter = Router();
 reportRouter.post("/", authoriseUser, createReportController);
 reportRouter.get("/", authoriseUser, getReportsController);
 reportRouter.get("/:id", authoriseUser, getReportByIdController);
+reportRouter.post("/:id/enhance", authoriseUser, enhanceResumeController);
+reportRouter.post(
+  "/:id/enhance-tex",
+  authoriseUser,
+  generateTexResumeController,
+);
 
 export default reportRouter;
