@@ -36,6 +36,10 @@ if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("OPENROUTER_API_KEY is not defined in environment variables");
 }
 
+if (!process.env.RESEND_API_KEY) {
+  throw new Error("RESEND_API_KEY is not defined in environment variables");
+}
+
 export const config = {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
@@ -46,4 +50,5 @@ export const config = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
 };

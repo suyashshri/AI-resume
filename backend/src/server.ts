@@ -8,8 +8,8 @@ import reportRouter from "./routes/report.routes";
 import rateLimit from "express-rate-limit";
 
 const aiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 2, // 5 AI calls per minute per IP
+  windowMs: 60 * 1000,
+  max: 5,
   message: { message: "Too many requests, please slow down." },
 });
 const app = express();

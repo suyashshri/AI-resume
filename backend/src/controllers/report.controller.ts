@@ -173,17 +173,15 @@ async function enhanceResumeController(req: Request, res: Response) {
       .map((g) => `- ${g.skill} (${g.severity} priority)`)
       .join("\n");
 
-    const prompt = `You are a professional resume writer. Below is a candidate's original resume and a list of skills
-  they are missing for their target role.
-
-  Your task is to produce an enhanced version of the resume that:
+    const prompt = `You are a professional resume writer. Below is a candidate's original resume and a list of skills they are missing for their target role.
+Your task is to produce an enhanced version of the resume that:
   1. Adds the missing skills naturally into the Skills or Technical Skills section
   2. Where genuinely plausible, subtly incorporates missing technologies into existing project or experience bullet
   points
   3. Does NOT invent new job titles, companies, degrees, or dates that are not already present
   4. Keeps the same overall structure, format and tone as the original
   5. Returns ONLY the enhanced resume text — no commentary, no code fences, no explanations
-
+  
   ORIGINAL RESUME:
   ${report.resume.content}
 
