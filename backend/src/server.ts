@@ -6,6 +6,7 @@ import resumeRouter from "./routes/resume.routes";
 import jobRouter from "./routes/job.routes";
 import reportRouter from "./routes/report.routes";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -14,6 +15,7 @@ const aiLimiter = rateLimit({
 });
 const app = express();
 
+app.use(helmet());
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json({ limit: "500kb" }));
 app.use(cookieParser());

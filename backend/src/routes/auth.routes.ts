@@ -50,4 +50,37 @@ authRouter.get(
   authController.getMeController,
 );
 
+/**
+ * @route GET /api/auth/profile
+ * @description Update any Profile Information
+ * @access Private
+ */
+authRouter.patch(
+  "/profile",
+  authmiddleware.authoriseUser,
+  authController.updateProfileController,
+);
+
+/**
+ * @route GET /api/auth/change-password
+ * @description Update Password
+ * @access Private
+ */
+authRouter.patch(
+  "/change-password",
+  authmiddleware.authoriseUser,
+  authController.changePasswordController,
+);
+
+/**
+ * @route GET /api/auth/account
+ * @description Delete an account
+ * @access Private
+ */
+authRouter.delete(
+  "/account",
+  authmiddleware.authoriseUser,
+  authController.deleteAccountController,
+);
+
 export default authRouter;

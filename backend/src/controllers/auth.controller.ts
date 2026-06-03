@@ -246,6 +246,81 @@ async function getMeController(req: Request, res: Response) {
   }
 }
 
+async function updateProfileController(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { username } = req.body;
+
+    if (!username?.trim()) {
+      return res.status(400).json({ message: "Username is required" });
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { username, NOT: { id: userId } },
+    });
+    if (existing) {
+      return res.status(400).json({ message: "Username already taken" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { username: username.trim() },
+    });
+
+    return res.status(200).json({
+      message: "Profile updated",
+      user: { id: user.id, username: user.username, email: user.email },
+    });
+  } catch (error) {
+    console.error("updateProfile error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
+async function changePasswordController(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Both passwords are required" });
+    }
+
+    const user = await prisma.user.findFirst({ where: { id: userId } });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    return res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("changePassword error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
+async function deleteAccountController(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+
+    await prisma.user.delete({ where: { id: userId } });
+
+    res.clearCookie("token");
+    return res.status(200).json({ message: "Account deleted" });
+  } catch (error) {
+    console.error("deleteAccount error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
 export {
   registerUserController,
   verifyOtpController,
@@ -253,4 +328,7 @@ export {
   loginUserController,
   logoutUserController,
   getMeController,
+  updateProfileController,
+  changePasswordController,
+  deleteAccountController,
 };

@@ -25,16 +25,17 @@ model User {
 }
 
 model Job {
-  id              String   @id @unique @default(cuid())
+  id              String            @id @unique @default(cuid())
   title           String?
   company         String?
   selfDescription String?
   jobDescription  String?
   jobUrl          String?
+  status          ApplicationStatus @default(Saved)
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
   reports         Report[]
-  createdAt       DateTime @default(now())
+  createdAt       DateTime          @default(now())
 }
 
 model Resume {
@@ -88,4 +89,12 @@ enum Severity {
   Low
   Medium
   High
+}
+
+enum ApplicationStatus {
+  Saved
+  Applied
+  Interview
+  Offer
+  Rejected
 }

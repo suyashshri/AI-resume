@@ -64,6 +64,42 @@ async function getJobsController(req: Request, res: Response) {
   return res.status(200).json({ message: "Jobs fetched successfully", jobs });
 }
 
+async function updateJobStatusController(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = [
+      "Saved",
+      "Applied",
+      "Interview",
+      "Offer",
+      "Rejected",
+    ];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    if (!id || Array.isArray(id)) {
+      return res.status(400).json({ message: "Please share valid id" });
+    }
+
+    const job = await prisma.job.findFirst({ where: { id, userId } });
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    const updated = await prisma.job.update({
+      where: { id },
+      data: { status },
+    });
+
+    return res.status(200).json({ message: "Status updated", job: updated });
+  } catch (error) {
+    console.error("updateJobStatus error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
 async function getJobByIdController(req: Request, res: Response) {
   const userId = req.user!.id;
   const { id } = req.params;
@@ -103,6 +139,7 @@ async function deleteJobController(req: Request, res: Response) {
 export {
   createJobController,
   getJobsController,
+  updateJobStatusController,
   getJobByIdController,
   deleteJobController,
 };
