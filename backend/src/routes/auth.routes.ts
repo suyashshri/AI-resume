@@ -11,7 +11,18 @@ const authRouter = Router();
  */
 authRouter.post("/register", authController.registerUserController);
 
+/**
+ * @route POST /api/auth/verify-otp
+ * @description Verify the user
+ * @access Public
+ */
 authRouter.post("/verify-otp", authController.verifyOtpController);
+
+/**
+ * @route POST /api/auth/resend-otp
+ * @description Resend OTP
+ * @access Public
+ */
 authRouter.post("/resend-otp", authController.resendOtpController);
 
 /**
