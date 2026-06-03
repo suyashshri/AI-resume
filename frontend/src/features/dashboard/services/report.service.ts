@@ -19,3 +19,13 @@ export async function getReportById(id: string) {
   const response = await api.get(`/api/report/${id}`);
   return response.data;
 }
+
+export async function enhanceResume(id: string) {
+  const response = await api.post(`/api/report/${id}/enhance`);
+  return response.data;
+}
+
+export async function generateTexResume(id: string) {
+  const response = await api.post(`/api/report/${id}/enhance-tex`);
+  return response.data;
+}

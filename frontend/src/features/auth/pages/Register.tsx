@@ -14,7 +14,7 @@ const Register = () => {
     e.preventDefault();
     try {
       await handleRegister({ username, email, password });
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/verify-otp", search: { email } });
     } catch {
       // error is set in auth context
     }
@@ -81,20 +81,20 @@ const Register = () => {
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              {/* <div className="flex gap-4">
                 <button className="social-btn flex-1" disabled>
                   Google
                 </button>
                 <button className="social-btn flex-1" disabled>
                   LinkedIn
                 </button>
-              </div>
+              </div> */}
 
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {/* <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <div className="flex-1 h-0.5 bg-border" />
                 OR CONTINUE WITH
                 <div className="flex-1 h-0.5 bg-border" />
-              </div>
+              </div> */}
 
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-1">
@@ -108,7 +108,7 @@ const Register = () => {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Alexandria Mercer"
+                    placeholder="John Doe"
                   />
                 </div>
 
@@ -123,7 +123,7 @@ const Register = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="alex@kinetic.ai"
+                    placeholder="john@hiremind.ai"
                   />
                 </div>
 

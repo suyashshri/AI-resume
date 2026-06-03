@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { getReportById } from "../services/report.service";
+import {
+  getReportById,
+  enhanceResume,
+  generateTexResume,
+} from "../services/report.service";
 
 type SkillGap = {
   id: string;
@@ -34,15 +38,73 @@ const severityStyles: Record<string, string> = {
 const Report = () => {
   const navigate = useNavigate();
   const { reportId } = useParams({ from: "/report/$reportId" });
+
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
+
+  const [generatingTex, setGeneratingTex] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhancedResume, setEnhancedResume] = useState<string | null>(null);
+  const [enhanceError, setEnhanceError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     getReportById(reportId)
       .then((data) => setReport(data.report))
       .finally(() => setLoading(false));
   }, [reportId]);
+
+  async function handleEnhance() {
+    setEnhancing(true);
+    setEnhanceError(null);
+    try {
+      const data = await enhanceResume(reportId);
+      setEnhancedResume(data.enhancedResume);
+    } catch (err) {
+      setEnhanceError(
+        err instanceof Error ? err.message : "Failed to enhance resume",
+      );
+    } finally {
+      setEnhancing(false);
+    }
+  }
+
+  function handleCopy() {
+    if (!enhancedResume) return;
+    navigator.clipboard.writeText(enhancedResume);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleDownload() {
+    if (!enhancedResume) return;
+    const blob = new Blob([enhancedResume], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `enhanced-resume-${report?.job.company ?? "hiremind"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDownloadTex() {
+    setGeneratingTex(true);
+    try {
+      const data = await generateTexResume(reportId);
+      const blob = new Blob([data.texContent], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `enhanced-resume-${report?.job.company ?? "hiremind"}.tex`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setEnhanceError("Failed to generate LaTeX resume");
+    } finally {
+      setGeneratingTex(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -170,7 +232,6 @@ const Report = () => {
                       {isOpen ? "▲" : "▼"}
                     </span>
                   </button>
-
                   {isOpen && (
                     <div className="px-4 pb-4 space-y-3 border-t border-border pt-4">
                       <div className="bg-surface rounded-lg p-3">
@@ -192,6 +253,155 @@ const Report = () => {
             })}
           </div>
         </div>
+
+        {/* ENHANCED RESUME */}
+        <div className="card space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="font-bold text-xl">Enhanced Resume</h2>
+              <p className="text-sm text-muted-foreground">
+                Generate a version of your resume with the missing skills
+                naturally incorporated.
+              </p>
+            </div>
+            {!enhancedResume && (
+              <button
+                onClick={handleEnhance}
+                disabled={enhancing}
+                className="btn-primary px-6 py-2 rounded-full text-sm w-auto shrink-0 disabled:opacity-50
+  disabled:cursor-not-allowed"
+              >
+                {enhancing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="loader" />
+                    <span>Enhancing...</span>
+                  </div>
+                ) : (
+                  "✦ Enhance Resume"
+                )}
+              </button>
+            )}
+          </div>
+
+          {enhanceError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
+              {enhanceError}
+            </div>
+          )}
+
+          {!enhancedResume && !enhancing && !enhanceError && (
+            <div
+              className="border-2 border-dashed border-border rounded-xl py-10 text-center text-muted-foreground
+  text-sm"
+            >
+              Click "Enhance Resume" to generate a version with your skill gaps
+              addressed.
+            </div>
+          )}
+
+          {enhancedResume && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Review the enhanced resume below. Skills from your gap
+                  analysis have been incorporated.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopy}
+                    className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
+  transition-colors font-medium"
+                  >
+                    {copied ? "✓ Copied" : "Copy"}
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="text-xs border border-primary text-primary px-3 py-1.5 rounded-full hover:bg-primary/5
+  transition-colors font-medium"
+                  >
+                    Download .txt
+                  </button>
+                  <button
+                    onClick={handleDownloadTex}
+                    disabled={generatingTex}
+                    className="text-xs border border-primary text-primary px-3 py-1.5 rounded-full hover:bg-primary/5
+  transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generatingTex ? "Generating..." : "Download .tex"}
+                  </button>
+                  <button
+                    onClick={() => setEnhancedResume(null)}
+                    className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
+  transition-colors text-muted-foreground"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+              <pre
+                className="whitespace-pre-wrap text-sm leading-relaxed bg-surface rounded-xl p-5 border
+  border-border font-sans max-h-125 overflow-y-auto"
+              >
+                {enhancedResume}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        {enhanceError}
+        {/* </div> */}
+        {/* )} */}
+
+        {/* {!enhancedResume && !enhancing && !enhanceError && (
+          <div
+            className="border-2 border-dashed border-border rounded-xl py-10 text-center
+  text-muted-foreground text-sm"
+          >
+            Click "Enhance Resume" to generate a version with your skill gaps
+            addressed.
+          </div>
+        )} */}
+
+        {/* {enhancedResume && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Review the enhanced resume below. Skills from your gap analysis
+                have been incorporated.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
+  transition-colors font-medium"
+                >
+                  {copied ? "✓ Copied" : "Copy"}
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="text-xs border border-primary text-primary px-3 py-1.5 rounded-full
+  hover:bg-primary/5 transition-colors font-medium"
+                >
+                  Download .txt
+                </button>
+                <button
+                  onClick={() => setEnhancedResume(null)}
+                  className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
+  transition-colors text-muted-foreground"
+                >
+                  Regenerate
+                </button>
+              </div>
+            </div>
+            <pre
+              className="whitespace-pre-wrap text-sm leading-relaxed bg-surface rounded-xl p-5 border
+  border-border font-sans max-h-[500px] overflow-y-auto"
+            >
+              {enhancedResume}
+            </pre>
+          </div>
+        )} */}
+        {/* </div> */}
       </main>
     </div>
   );

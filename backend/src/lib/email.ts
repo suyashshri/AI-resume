@@ -4,6 +4,11 @@ import { config } from "../config/config";
 const resend = new Resend(config.RESEND_API_KEY);
 
 export async function sendOtpEmail(email: string, otp: string) {
+  if (config.NODE_ENV !== "production") {
+    console.log(`\n[DEV] OTP for ${email} → ${otp}\n`);
+    return;
+  }
+
   await resend.emails.send({
     from: "HireMind <onboarding@resend.dev>",
     to: [email],

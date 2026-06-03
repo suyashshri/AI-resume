@@ -53,8 +53,13 @@ export const useAuth = () => {
       const data = await login({ email, password });
       setError(null);
       setUser(data.user);
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.log("Error while Registering the user:", error);
+      if (error?.requiresVerification) {
+        setError(error.message);
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       setError(message);
       throw new Error(message);
@@ -72,6 +77,7 @@ export const useAuth = () => {
   return {
     isAuthenticated,
     user,
+    setUser,
     loading,
     handleRegister,
     handleLogin,

@@ -9,13 +9,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { loading, error, handleLogin } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       await handleLogin({ email, password });
       navigate({ to: "/dashboard" });
-    } catch {
-      // error is set in auth context
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      if (error?.requiresVerification) {
+        navigate({ to: "/verify-otp", search: { email: error.email } });
+      }
     }
   };
 
@@ -75,20 +78,20 @@ const Login = () => {
               </p>
             </div>
 
-            <div className="flex gap-4">
+            {/* <div className="flex gap-4">
               <button className="social-btn flex-1" disabled>
                 Google
               </button>
               <button className="social-btn flex-1" disabled>
                 LinkedIn
               </button>
-            </div>
+            </div> */}
 
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {/* <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <div className="flex-1 h-px bg-border" />
               OR LOGIN WITH EMAIL
               <div className="flex-1 h-px bg-border" />
-            </div>
+            </div> */}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="flex flex-col gap-1">
