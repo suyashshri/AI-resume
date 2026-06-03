@@ -64,7 +64,6 @@ async function createReportController(req: Request, res: Response) {
     let analysisData;
     try {
       analysisData = ClaudeReport.parse(JSON.parse(jsonString));
-      console.log("analysisData:", analysisData);
     } catch {
       return res.status(500).json({ message: "Failed to parse AI response" });
     }
