@@ -12,19 +12,20 @@ async function createReportController(req: Request, res: Response) {
   const { resumeId, jobId } = parsed.data;
   const userId = req.user!.id;
 
-  const [resume, job] = await Promise.all([
-    prisma.resume.findFirst({ where: { id: resumeId, userId } }),
-    prisma.job.findFirst({ where: { id: jobId, userId } }),
-  ]);
+  try {
+    const [resume, job] = await Promise.all([
+      prisma.resume.findFirst({ where: { id: resumeId, userId } }),
+      prisma.job.findFirst({ where: { id: jobId, userId } }),
+    ]);
 
-  if (!resume) return res.status(404).json({ message: "Resume not found" });
-  if (!job) return res.status(404).json({ message: "Job not found" });
-  if (!job.jobDescription)
-    return res
-      .status(400)
-      .json({ message: "Job has no description to analyze" });
+    if (!resume) return res.status(404).json({ message: "Resume not found" });
+    if (!job) return res.status(404).json({ message: "Job not found" });
+    if (!job.jobDescription)
+      return res
+        .status(400)
+        .json({ message: "Job has no description to analyze" });
 
-  const prompt = `You are a professional resume analyst. Analyze the resume against the job description and return
+    const prompt = `You are a professional resume analyst. Analyze the resume against the job description and return
   ONLY a valid JSON object with this exact structure, no other text:
 
   {
@@ -49,65 +50,74 @@ async function createReportController(req: Request, res: Response) {
   JOB DESCRIPTION:
   ${job.jobDescription}`;
 
-  const completion = await openrouter.chat.completions.create({
-    model: "anthropic/claude-sonnet-4-5",
-    max_tokens: 2048,
-    messages: [{ role: "user", content: prompt }],
-  });
+    const completion = await openrouter.chat.completions.create({
+      model: "anthropic/claude-sonnet-4-5",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
 
-  const raw = completion.choices[0]?.message.content ?? "";
+    const raw = completion.choices[0]?.message.content ?? "";
 
-  const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonString = (jsonMatch?.[1] ?? raw).trim();
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const jsonString = (jsonMatch?.[1] ?? raw).trim();
 
-  let analysisData;
-  try {
-    analysisData = ClaudeReport.parse(JSON.parse(jsonString));
-    console.log("analysisData:", analysisData);
-  } catch {
-    return res.status(500).json({ message: "Failed to parse AI response" });
+    let analysisData;
+    try {
+      analysisData = ClaudeReport.parse(JSON.parse(jsonString));
+      console.log("analysisData:", analysisData);
+    } catch {
+      return res.status(500).json({ message: "Failed to parse AI response" });
+    }
+
+    const report = await prisma.report.create({
+      data: {
+        userId,
+        resumeId,
+        jobId,
+        score: analysisData.score,
+        summary: analysisData.summary,
+        skillGaps: {
+          create: analysisData.skillGaps,
+        },
+        questions: {
+          create: analysisData.questions,
+        },
+      },
+      include: { skillGaps: true, questions: true },
+    });
+
+    return res
+      .status(201)
+      .json({ message: "Report generated successfully", report });
+  } catch (error) {
+    console.error("createReport error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
   }
-
-  const report = await prisma.report.create({
-    data: {
-      userId,
-      resumeId,
-      jobId,
-      score: analysisData.score,
-      summary: analysisData.summary,
-      skillGaps: {
-        create: analysisData.skillGaps,
-      },
-      questions: {
-        create: analysisData.questions,
-      },
-    },
-    include: { skillGaps: true, questions: true },
-  });
-
-  return res
-    .status(201)
-    .json({ message: "Report generated successfully", report });
 }
 
 async function getReportsController(req: Request, res: Response) {
   const userId = req.user!.id;
 
-  const reports = await prisma.report.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      score: true,
-      summary: true,
-      createdAt: true,
-      job: { select: { title: true, company: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const reports = await prisma.report.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        score: true,
+        summary: true,
+        createdAt: true,
+        job: { select: { title: true, company: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return res
-    .status(200)
-    .json({ message: "Reports fetched successfully", reports });
+    return res
+      .status(200)
+      .json({ message: "Reports fetched successfully", reports });
+  } catch (error) {
+    console.error("createReport error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
 }
 
 async function getReportByIdController(req: Request, res: Response) {
@@ -118,20 +128,25 @@ async function getReportByIdController(req: Request, res: Response) {
     return res.status(400).json({ message: "Please share valid id" });
   }
 
-  const report = await prisma.report.findFirst({
-    where: { id, userId },
-    include: {
-      skillGaps: true,
-      questions: true,
-      job: { select: { title: true, company: true, jobUrl: true } },
-    },
-  });
+  try {
+    const report = await prisma.report.findFirst({
+      where: { id, userId },
+      include: {
+        skillGaps: true,
+        questions: true,
+        job: { select: { title: true, company: true, jobUrl: true } },
+      },
+    });
 
-  if (!report) return res.status(404).json({ message: "Report not found" });
+    if (!report) return res.status(404).json({ message: "Report not found" });
 
-  return res
-    .status(200)
-    .json({ message: "Report fetched successfully", report });
+    return res
+      .status(200)
+      .json({ message: "Report fetched successfully", report });
+  } catch (error) {
+    console.error("createReport error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
 }
 
 async function enhanceResumeController(req: Request, res: Response) {
@@ -141,25 +156,25 @@ async function enhanceResumeController(req: Request, res: Response) {
   if (!id || Array.isArray(id)) {
     return res.status(400).json({ message: "Please share valid id" });
   }
+  try {
+    const report = await prisma.report.findFirst({
+      where: { id, userId },
+      include: {
+        resume: true,
+        job: true,
+        skillGaps: true,
+      },
+    });
 
-  const report = await prisma.report.findFirst({
-    where: { id, userId },
-    include: {
-      resume: true,
-      job: true,
-      skillGaps: true,
-    },
-  });
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
 
-  if (!report) {
-    return res.status(404).json({ message: "Report not found" });
-  }
+    const skillGapsList = report.skillGaps
+      .map((g) => `- ${g.skill} (${g.severity} priority)`)
+      .join("\n");
 
-  const skillGapsList = report.skillGaps
-    .map((g) => `- ${g.skill} (${g.severity} priority)`)
-    .join("\n");
-
-  const prompt = `You are a professional resume writer. Below is a candidate's original resume and a list of skills
+    const prompt = `You are a professional resume writer. Below is a candidate's original resume and a list of skills
   they are missing for their target role.
 
   Your task is to produce an enhanced version of the resume that:
@@ -176,24 +191,28 @@ async function enhanceResumeController(req: Request, res: Response) {
   MISSING SKILLS TO INCORPORATE:
   ${skillGapsList}`;
 
-  const completion = await openrouter.chat.completions.create({
-    model: "anthropic/claude-sonnet-4-5",
-    max_tokens: 3000,
-    messages: [{ role: "user", content: prompt }],
-  });
+    const completion = await openrouter.chat.completions.create({
+      model: "anthropic/claude-sonnet-4-5",
+      max_tokens: 3000,
+      messages: [{ role: "user", content: prompt }],
+    });
 
-  const enhancedResume = completion.choices[0]?.message.content?.trim() ?? "";
+    const enhancedResume = completion.choices[0]?.message.content?.trim() ?? "";
 
-  if (!enhancedResume) {
-    return res
-      .status(500)
-      .json({ message: "Failed to generate enhanced resume" });
+    if (!enhancedResume) {
+      return res
+        .status(500)
+        .json({ message: "Failed to generate enhanced resume" });
+    }
+
+    return res.status(200).json({
+      message: "Enhanced resume generated successfully",
+      enhancedResume,
+    });
+  } catch (error) {
+    console.error("createReport error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
   }
-
-  return res.status(200).json({
-    message: "Enhanced resume generated successfully",
-    enhancedResume,
-  });
 }
 
 async function generateTexResumeController(req: Request, res: Response) {
@@ -203,21 +222,21 @@ async function generateTexResumeController(req: Request, res: Response) {
   if (!id || Array.isArray(id)) {
     return res.status(400).json({ message: "Please share valid id" });
   }
+  try {
+    const report = await prisma.report.findFirst({
+      where: { id, userId },
+      include: { resume: true, job: true, skillGaps: true },
+    });
 
-  const report = await prisma.report.findFirst({
-    where: { id, userId },
-    include: { resume: true, job: true, skillGaps: true },
-  });
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
 
-  if (!report) {
-    return res.status(404).json({ message: "Report not found" });
-  }
+    const skillGapsList = report.skillGaps
+      .map((g) => `- ${g.skill} (${g.severity} priority)`)
+      .join("\n");
 
-  const skillGapsList = report.skillGaps
-    .map((g) => `- ${g.skill} (${g.severity} priority)`)
-    .join("\n");
-
-  const prompt = `You are a LaTeX expert and professional resume writer. Below is a candidate's resume and a
+    const prompt = `You are a LaTeX expert and professional resume writer. Below is a candidate's resume and a
   list of skills they are missing.
 
   Your task:
@@ -272,26 +291,32 @@ async function generateTexResumeController(req: Request, res: Response) {
   MISSING SKILLS TO INCORPORATE:
   ${skillGapsList}`;
 
-  const completion = await openrouter.chat.completions.create({
-    model: "anthropic/claude-sonnet-4-5",
-    max_tokens: 4000,
-    messages: [{ role: "user", content: prompt }],
-  });
+    const completion = await openrouter.chat.completions.create({
+      model: "anthropic/claude-sonnet-4-5",
+      max_tokens: 4000,
+      messages: [{ role: "user", content: prompt }],
+    });
 
-  const raw = completion.choices[0]?.message.content?.trim() ?? "";
+    const raw = completion.choices[0]?.message.content?.trim() ?? "";
 
-  // Strip markdown fences if the model wrapped the output
-  const jsonMatch = raw.match(/```(?:latex|tex)?\s*([\s\S]*?)```/);
-  const texContent = (jsonMatch?.[1] ?? raw).trim();
+    // Strip markdown fences if the model wrapped the output
+    const jsonMatch = raw.match(/```(?:latex|tex)?\s*([\s\S]*?)```/);
+    const texContent = (jsonMatch?.[1] ?? raw).trim();
 
-  if (!texContent) {
-    return res.status(500).json({ message: "Failed to generate LaTeX resume" });
+    if (!texContent) {
+      return res
+        .status(500)
+        .json({ message: "Failed to generate LaTeX resume" });
+    }
+
+    return res.status(200).json({
+      message: "LaTeX resume generated successfully",
+      texContent,
+    });
+  } catch (error) {
+    console.error("createReport error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
   }
-
-  return res.status(200).json({
-    message: "LaTeX resume generated successfully",
-    texContent,
-  });
 }
 
 export {
