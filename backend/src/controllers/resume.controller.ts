@@ -50,7 +50,7 @@ async function uploadResumeController(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error("createReport error:", error);
+    console.error("UploadResume error:", error);
     return res.status(500).json({ message: "Something went wrong" });
   }
 }
@@ -70,7 +70,7 @@ async function getResumesController(req: Request, res: Response) {
       resumes,
     });
   } catch (error) {
-    console.error("createReport error:", error);
+    console.error("GetResume error:", error);
     return res.status(500).json({ message: "Something went wrong" });
   }
 }
@@ -110,7 +110,7 @@ async function getResumeByIdController(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error("createReport error:", error);
+    console.error("GetResumebyId error:", error);
     return res.status(500).json({ message: "Something went wrong" });
   }
 }
@@ -140,7 +140,7 @@ async function deleteResumeController(req: Request, res: Response) {
 
     return res.status(200).json({ message: "Resume deleted successfully" });
   } catch (error) {
-    console.error("createReport error:", error);
+    console.error("DeleteResume error:", error);
     return res.status(500).json({ message: "Something went wrong" });
   }
 }

@@ -1,4 +1,4 @@
-import { Queue, Worker } from "bullmq";
+import { Queue, tryCatch, Worker } from "bullmq";
 import { createClient } from "redis";
 import prisma from "../db/singleton";
 import openrouter from "./openrouter";
@@ -7,7 +7,15 @@ import { config } from "../config/config";
 
 const connection = { url: config.REDIS_URL };
 
-export const reportQueue = new Queue("report-analysis", { connection });
+export const reportQueue = new Queue("report-analysis", {
+  connection,
+  defaultJobOptions: {
+    attempts: 2,
+    backoff: { type: "exponential", delay: 5000 },
+    removeOnComplete: { age: 3600 },
+    removeOnFail: { age: 86400 },
+  },
+});
 
 export const reportWorker = new Worker(
   "report-analysis",
@@ -43,31 +51,35 @@ export const reportWorker = new Worker(
   JOB DESCRIPTION:
   ${dbJob.jobDescription}`;
 
-    const completion = await openrouter.chat.completions.create({
-      model: "anthropic/claude-sonnet-4-5",
-      max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
-    });
+    try {
+      const completion = await openrouter.chat.completions.create({
+        model: "anthropic/claude-sonnet-4-5",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt }],
+      });
 
-    const raw = completion.choices[0]?.message.content ?? "";
-    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    const jsonString = (jsonMatch?.[1] ?? raw).trim();
-    const analysisData = ClaudeReport.parse(JSON.parse(jsonString));
+      const raw = completion.choices[0]?.message.content ?? "";
+      const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const jsonString = (jsonMatch?.[1] ?? raw).trim();
+      const analysisData = ClaudeReport.parse(JSON.parse(jsonString));
 
-    const report = await prisma.report.create({
-      data: {
-        userId,
-        resumeId,
-        jobId,
-        score: analysisData.score,
-        summary: analysisData.summary,
-        skillGaps: { create: analysisData.skillGaps },
-        questions: { create: analysisData.questions },
-      },
-      include: { skillGaps: true, questions: true },
-    });
+      const report = await prisma.report.create({
+        data: {
+          userId,
+          resumeId,
+          jobId,
+          score: analysisData.score,
+          summary: analysisData.summary,
+          skillGaps: { create: analysisData.skillGaps },
+          questions: { create: analysisData.questions },
+        },
+        include: { skillGaps: true, questions: true },
+      });
 
-    return { reportId: report.id };
+      return { reportId: report.id };
+    } catch (error) {
+      console.log("Error while running worker");
+    }
   },
   { connection },
 );

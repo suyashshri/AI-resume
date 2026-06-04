@@ -205,6 +205,35 @@ async function getReportByIdController(req: Request, res: Response) {
   }
 }
 
+async function deleteReportController(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  if (!id || Array.isArray(id)) {
+    return res.status(400).json({ message: "Please share valid id" });
+  }
+
+  try {
+    const report = await prisma.report.findFirst({ where: { id, userId } });
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    // Delete related records first — no cascade set in schema
+    await prisma.$transaction([
+      prisma.skillGap.deleteMany({ where: { reportId: id } }),
+      prisma.technicalQuestion.deleteMany({ where: { reportId: id } }),
+      prisma.report.delete({ where: { id } }),
+    ]);
+
+    return res.status(200).json({ message: "Report deleted successfully" });
+  } catch (error) {
+    console.error("deleteReport error:", error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+}
+
 async function generateCoverLetterController(req: Request, res: Response) {
   const userId = req.user!.id;
   const { id } = req.params;
@@ -227,7 +256,7 @@ async function generateCoverLetterController(req: Request, res: Response) {
   based on the resume and job description below.
 
   Rules:
-  1. Keep it to 3-4 paragraphs — opening, why you're a fit, specific skills, closing
+  1. Keep it to 1-2 paragraphs — opening, why you're a fit, specific skills, closing
   2. Do not copy the resume verbatim — synthesize and highlight the most relevant experience
   3. Match the tone of the job description (startup = casual/energetic, enterprise = formal)
   4. Do NOT use generic phrases like "I am writing to apply" or "I believe I am a perfect fit"
@@ -253,15 +282,27 @@ async function generateCoverLetterController(req: Request, res: Response) {
       stream: true,
     });
 
+    let fullContent = "";
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content ?? "";
       if (content) {
+        fullContent += content;
         res.write(`data: ${JSON.stringify({ content })}\n\n`);
       }
     }
 
     res.write("data: [DONE]\n\n");
     res.end();
+    if (fullContent) {
+      try {
+        await prisma.report.update({
+          where: { id },
+          data: { coverLetter: fullContent },
+        });
+      } catch (dbError) {
+        console.error("Failed to save cover letter to DB:", dbError);
+      }
+    }
   } catch (error) {
     console.error("generateCoverLetter error:", error);
     res.write(`data: ${JSON.stringify({ error: "Generation failed" })}\n\n`);
@@ -322,6 +363,11 @@ Your task is to produce an enhanced version of the resume that:
         .status(500)
         .json({ message: "Failed to generate enhanced resume" });
     }
+
+    await prisma.report.update({
+      where: { id },
+      data: { enhancedResume: enhancedResume },
+    });
 
     return res.status(200).json({
       message: "Enhanced resume generated successfully",
@@ -442,6 +488,7 @@ export {
   getReportJobStatusController,
   getReportsController,
   getReportByIdController,
+  deleteReportController,
   generateCoverLetterController,
   enhanceResumeController,
   generateTexResumeController,

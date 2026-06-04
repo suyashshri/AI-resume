@@ -7,13 +7,21 @@ import {
   enhanceResumeController,
   generateTexResumeController,
   generateCoverLetterController,
+  deleteReportController,
+  getReportJobStatusController,
 } from "../controllers/report.controller";
 
 const reportRouter = Router();
 
 reportRouter.post("/", authoriseUser, createReportController);
+reportRouter.get(
+  "/job-status/:jobId",
+  authoriseUser,
+  getReportJobStatusController,
+);
 reportRouter.get("/", authoriseUser, getReportsController);
 reportRouter.get("/:id", authoriseUser, getReportByIdController);
+reportRouter.delete("/:id", authoriseUser, deleteReportController);
 reportRouter.get(
   "/:id/cover-letter",
   authoriseUser,

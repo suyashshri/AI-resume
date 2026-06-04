@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ThemeToggle } from "../../ui/ThemeToggle";
 
 const features = [
   {
@@ -99,7 +100,7 @@ const Landing = () => {
               Stories
             </a>
           </div>
-
+          <ThemeToggle />
           <div className="flex items-center gap-3">
             <Link
               to="/login"

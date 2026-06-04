@@ -49,23 +49,20 @@ model Resume {
 }
 
 model Report {
-  id     String @id @unique @default(cuid())
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id])
-
-  resumeId String
-  resume   Resume @relation(fields: [resumeId], references: [id])
-
-  score   Int
-  summary String?
-
-  skillGaps SkillGap[]
-  questions TechnicalQuestion[]
-
-  createdAt DateTime @default(now())
+  id             String              @id @unique @default(cuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  jobId          String
+  job            Job                 @relation(fields: [jobId], references: [id])
+  resumeId       String
+  resume         Resume              @relation(fields: [resumeId], references: [id])
+  score          Int
+  summary        String?
+  enhancedResume String?
+  coverLetter    String?
+  skillGaps      SkillGap[]
+  questions      TechnicalQuestion[]
+  createdAt      DateTime            @default(now())
 }
 
 model TechnicalQuestion {

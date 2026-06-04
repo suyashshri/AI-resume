@@ -4,7 +4,13 @@ import {
   getReportById,
   enhanceResume,
   generateTexResume,
+  streamCoverLetter,
+  deleteReport,
 } from "../services/report.service";
+import { ThemeToggle } from "../../ui/ThemeToggle";
+import { ReportSkeleton } from "../../ui/Skeleton";
+import { toast } from "sonner";
+import { exportReportPdf } from "../utils/exportPdf";
 
 type SkillGap = {
   id: string;
@@ -23,6 +29,8 @@ type ReportData = {
   id: string;
   score: number;
   summary: string | null;
+  enhancedResume: string | null;
+  coverLetter: string | null;
   createdAt: string;
   skillGaps: SkillGap[];
   questions: Question[];
@@ -46,27 +54,48 @@ const Report = () => {
   const [generatingTex, setGeneratingTex] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [enhancedResume, setEnhancedResume] = useState<string | null>(null);
-  const [enhanceError, setEnhanceError] = useState<string | null>(null);
+  // const [enhanceError, setEnhanceError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const [coverLetter, setCoverLetter] = useState("");
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [copiedCoverLetter, setCopiedCoverLetter] = useState(false);
 
   useEffect(() => {
     getReportById(reportId)
-      .then((data) => setReport(data.report))
+      .then((data) => {
+        setReport(data.report);
+        if (data.report.enhancedResume) {
+          setEnhancedResume(data.report.enhancedResume);
+        }
+        if (data.report.coverLetter) {
+          setCoverLetter(data.report.coverLetter);
+        }
+      })
       .finally(() => setLoading(false));
   }, [reportId]);
 
   async function handleEnhance() {
     setEnhancing(true);
-    setEnhanceError(null);
     try {
       const data = await enhanceResume(reportId);
       setEnhancedResume(data.enhancedResume);
     } catch (err) {
-      setEnhanceError(
+      toast.error(
         err instanceof Error ? err.message : "Failed to enhance resume",
       );
     } finally {
       setEnhancing(false);
+    }
+  }
+
+  async function handleDeleteReport() {
+    try {
+      await deleteReport(reportId);
+      toast.success("Report deleted");
+      navigate({ to: "/dashboard" });
+    } catch {
+      toast.error("Failed to delete report");
     }
   }
 
@@ -100,19 +129,33 @@ const Report = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setEnhanceError("Failed to generate LaTeX resume");
+      toast.error("Failed to generate LaTeX resume");
     } finally {
       setGeneratingTex(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="loader" />
-      </div>
+  async function handleGenerateCoverLetter() {
+    setGeneratingCoverLetter(true);
+    setCoverLetter("");
+    await streamCoverLetter(
+      reportId,
+      (chunk) => setCoverLetter((prev) => prev + chunk),
+      () => setGeneratingCoverLetter(false),
+      (msg) => {
+        toast.error(msg);
+        setGeneratingCoverLetter(false);
+      },
     );
   }
+
+  function handleCopyCoverLetter() {
+    navigator.clipboard.writeText(coverLetter);
+    setCopiedCoverLetter(true);
+    setTimeout(() => setCopiedCoverLetter(false), 2000);
+  }
+
+  if (loading) return <ReportSkeleton />;
 
   if (!report) {
     return (
@@ -131,12 +174,29 @@ const Report = () => {
             <span className="text-foreground">Hire</span>
             <span className="text-primary">Mind</span>
           </span>
-          <button
-            onClick={() => navigate({ to: "/dashboard" })}
-            className="text-sm border border-border px-4 py-1.5 rounded-full hover:bg-surface transition-colors"
-          >
-            ← Back to Dashboard
-          </button>
+          <div className="flex gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => exportReportPdf(report)}
+              className="text-sm border border-border px-4 py-1.5 rounded-full hover:bg-surface
+  transition-colors"
+            >
+              Download PDF
+            </button>
+            <button
+              onClick={handleDeleteReport}
+              className="text-sm border border-red-300 text-red-500 px-4 py-1.5 rounded-full hover:bg-red-50 transition-colors"
+            >
+              Delete Report
+            </button>
+            <button
+              onClick={() => navigate({ to: "/dashboard" })}
+              className="text-sm border border-border px-4 py-1.5 rounded-full hover:bg-surface
+  transition-colors"
+            >
+              ← Dashboard
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -171,9 +231,9 @@ const Report = () => {
           </div>
           <div className="space-y-2">
             <div className="badge w-fit">
-              {report.score >= 80
+              {report.score >= 85
                 ? "Strong Match"
-                : report.score >= 60
+                : report.score >= 70
                   ? "Good Match"
                   : "Needs Work"}
             </div>
@@ -264,32 +324,65 @@ const Report = () => {
                 naturally incorporated.
               </p>
             </div>
+
             {!enhancedResume && (
-              <button
-                onClick={handleEnhance}
-                disabled={enhancing}
-                className="btn-primary px-6 py-2 rounded-full text-sm w-auto shrink-0 disabled:opacity-50
-  disabled:cursor-not-allowed"
-              >
-                {enhancing ? (
-                  <div className="flex items-center gap-2">
-                    <div className="loader" />
-                    <span>Enhancing...</span>
-                  </div>
-                ) : (
-                  "✦ Enhance Resume"
-                )}
-              </button>
+              <div className="relative group">
+                {/* Ambient glow behind button on hover */}
+                <div
+                  className="absolute inset-0 rounded-full blur-xl scale-125 opacity-0 group-hover:opacity-40
+  transition-opacity duration-500 -z-10"
+                  style={{ backgroundColor: "var(--color-primary)" }}
+                />
+
+                <button
+                  onClick={handleEnhance}
+                  disabled={enhancing}
+                  className="relative btn-primary px-6 py-2 rounded-full text-sm w-auto shrink-0 overflow-hidden
+                   transition-all duration-300
+                   hover:scale-105 active:scale-95
+                   disabled:opacity-70 disabled:cursor-not-allowed
+                   disabled:hover:scale-100 disabled:active:scale-100"
+                >
+                  {/* Shimmer sweep across button while loading */}
+                  {enhancing && (
+                    <span
+                      className="absolute inset-0 w-1/3 bg-linear-to-r from-transparent via-white/25 to-transparent"
+                      style={{
+                        animation: "shimmer-sweep 1.5s ease-in-out infinite",
+                      }}
+                    />
+                  )}
+
+                  {enhancing ? (
+                    <span className="relative flex items-center gap-2.5">
+                      <span className="flex gap-1 items-end">
+                        {[0, 1, 2].map((i) => (
+                          <span
+                            key={i}
+                            className="w-1.5 h-1.5 rounded-full bg-white animate-bounce"
+                            style={{
+                              animationDelay: `${i * 0.15}s`,
+                              animationDuration: "0.8s",
+                            }}
+                          />
+                        ))}
+                      </span>
+                      <span>Enhancing</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block transition-transform duration-700 group-hover:rotate-360">
+                        ✦
+                      </span>
+                      <span>Enhance Resume</span>
+                    </span>
+                  )}
+                </button>
+              </div>
             )}
           </div>
 
-          {enhanceError && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
-              {enhanceError}
-            </div>
-          )}
-
-          {!enhancedResume && !enhancing && !enhanceError && (
+          {!enhancedResume && !enhancing && (
             <div
               className="border-2 border-dashed border-border rounded-xl py-10 text-center text-muted-foreground
   text-sm"
@@ -301,46 +394,46 @@ const Report = () => {
 
           {enhancedResume && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Review the enhanced resume below. Skills from your gap
-                  analysis have been incorporated.
+              <div className=" items-center ">
+                <p className="text-xs text-muted-foreground mb-4">
+                  Skills from your gap analysis have been incorporated.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={handleCopy}
-                    className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
-  transition-colors font-medium"
+                    className="text-xs border border-border text-foreground px-3 py-1.5 rounded-full
+  hover:bg-surface transition-colors font-medium"
                   >
                     {copied ? "✓ Copied" : "Copy"}
                   </button>
                   <button
                     onClick={handleDownload}
-                    className="text-xs border border-primary text-primary px-3 py-1.5 rounded-full hover:bg-primary/5
-  transition-colors font-medium"
+                    className="text-xs border border-border text-foreground px-3 py-1.5 rounded-full
+  hover:bg-surface transition-colors font-medium"
                   >
                     Download .txt
                   </button>
                   <button
                     onClick={handleDownloadTex}
                     disabled={generatingTex}
-                    className="text-xs border border-primary text-primary px-3 py-1.5 rounded-full hover:bg-primary/5
-  transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-xs border border-border text-foreground px-3 py-1.5 rounded-full
+  hover:bg-surface transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generatingTex ? "Generating..." : "Download .tex"}
                   </button>
+
                   <button
                     onClick={() => setEnhancedResume(null)}
-                    className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
-  transition-colors text-muted-foreground"
+                    className="text-xs border border-border text-muted-foreground px-3 py-1.5 rounded-full
+  hover:bg-surface transition-colors"
                   >
                     Regenerate
                   </button>
                 </div>
               </div>
               <pre
-                className="whitespace-pre-wrap text-sm leading-relaxed bg-surface rounded-xl p-5 border
-  border-border font-sans max-h-125 overflow-y-auto"
+                className="whitespace-pre-wrap text-sm leading-relaxed text-foreground bg-surface rounded-xl p-5
+  border border-border font-sans max-h-125 overflow-y-auto"
               >
                 {enhancedResume}
               </pre>
@@ -348,60 +441,123 @@ const Report = () => {
           )}
         </div>
 
-        {enhanceError}
-        {/* </div> */}
-        {/* )} */}
-
-        {/* {!enhancedResume && !enhancing && !enhanceError && (
-          <div
-            className="border-2 border-dashed border-border rounded-xl py-10 text-center
-  text-muted-foreground text-sm"
-          >
-            Click "Enhance Resume" to generate a version with your skill gaps
-            addressed.
-          </div>
-        )} */}
-
-        {/* {enhancedResume && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                Review the enhanced resume below. Skills from your gap analysis
-                have been incorporated.
+        {/* COVER LETTER */}
+        <div className="card space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="font-bold text-xl">Cover Letter</h2>
+              <p className="text-sm text-muted-foreground">
+                AI-generated cover letter tailored to this role and your resume.
               </p>
-              <div className="flex gap-2">
+            </div>
+
+            {!coverLetter && (
+              <div className="relative group">
+                {/* Ambient glow behind button on hover */}
+                <div
+                  className="absolute inset-0 rounded-full blur-xl scale-125 opacity-0 group-hover:opacity-40
+  transition-opacity duration-500 -z-10"
+                  style={{ backgroundColor: "var(--color-primary)" }}
+                />
+
                 <button
-                  onClick={handleCopy}
-                  className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
-  transition-colors font-medium"
+                  onClick={handleGenerateCoverLetter}
+                  disabled={generatingCoverLetter}
+                  className="relative btn-primary px-6 py-2 rounded-full text-sm w-auto shrink-0 overflow-hidden
+                   transition-all duration-300
+                   hover:scale-105 active:scale-95
+                   disabled:opacity-70 disabled:cursor-not-allowed
+                   disabled:hover:scale-100 disabled:active:scale-100"
                 >
-                  {copied ? "✓ Copied" : "Copy"}
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="text-xs border border-primary text-primary px-3 py-1.5 rounded-full
-  hover:bg-primary/5 transition-colors font-medium"
-                >
-                  Download .txt
-                </button>
-                <button
-                  onClick={() => setEnhancedResume(null)}
-                  className="text-xs border border-border px-3 py-1.5 rounded-full hover:bg-surface
-  transition-colors text-muted-foreground"
-                >
-                  Regenerate
+                  {generatingCoverLetter && (
+                    <span
+                      className="absolute inset-0 w-1/3 bg-linear-to-r from-transparent via-white/25 to-transparent"
+                      style={{
+                        animation: "shimmer-sweep 1.5s ease-in-out infinite",
+                      }}
+                    />
+                  )}
+
+                  {generatingCoverLetter ? (
+                    <span className="relative flex items-center gap-2.5">
+                      <span className="flex gap-1 items-end">
+                        {[0, 1, 2].map((i) => (
+                          <span
+                            key={i}
+                            className="w-1.5 h-1.5 rounded-full bg-white animate-bounce"
+                            style={{
+                              animationDelay: `${i * 0.15}s`,
+                              animationDuration: "0.8s",
+                            }}
+                          />
+                        ))}
+                      </span>
+                      <span>Writing</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block transition-transform duration-700 group-hover:rotate-360">
+                        ✦
+                      </span>
+                      <span>Generate</span>
+                    </span>
+                  )}
                 </button>
               </div>
-            </div>
-            <pre
-              className="whitespace-pre-wrap text-sm leading-relaxed bg-surface rounded-xl p-5 border
-  border-border font-sans max-h-[500px] overflow-y-auto"
-            >
-              {enhancedResume}
-            </pre>
+            )}
+            {/* {!coverLetter && (
+              <button
+                onClick={handleGenerateCoverLetter}
+                disabled={generatingCoverLetter}
+                className="btn-primary px-6 py-2 rounded-full text-sm w-auto shrink-0 disabled:opacity-50
+  disabled:cursor-not-allowed"
+              >
+                {generatingCoverLetter ? "Writing..." : "✦ Generate"}
+              </button>
+            )} */}
           </div>
-        )} */}
-        {/* </div> */}
+
+          {!coverLetter && !generatingCoverLetter && (
+            <div
+              className="border-2 border-dashed border-border rounded-xl py-10 text-center
+  text-muted-foreground text-sm"
+            >
+              Click "Generate" to create a tailored cover letter.
+            </div>
+          )}
+
+          {(coverLetter || generatingCoverLetter) && (
+            <div className="space-y-3">
+              {coverLetter && (
+                <div className="flex justify-end gap-2 flex-wrap">
+                  <button
+                    onClick={handleCopyCoverLetter}
+                    className="text-xs border border-border text-foreground px-3 py-1.5 rounded-full
+  hover:bg-surface transition-colors font-medium"
+                  >
+                    {copiedCoverLetter ? "✓ Copied" : "Copy"}
+                  </button>
+                  <button
+                    onClick={() => setCoverLetter("")}
+                    className="text-xs border border-border text-muted-foreground px-3 py-1.5 rounded-full
+  hover:bg-surface transition-colors"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              )}
+              <pre
+                className="whitespace-pre-wrap text-sm leading-relaxed text-foreground bg-surface
+  rounded-xl p-5 border border-border font-sans max-h-125 overflow-y-auto"
+              >
+                {coverLetter}
+                {generatingCoverLetter && (
+                  <span className="inline-block w-2 h-4 bg-primary ml-1 animate-pulse align-middle" />
+                )}
+              </pre>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

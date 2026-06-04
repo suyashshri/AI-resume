@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../../auth/hooks/useAuth";
 import {
@@ -7,7 +7,15 @@ import {
   deleteResume,
 } from "../services/resume.service";
 import { createJob, getJobs, deleteJob } from "../services/job.service";
-import { createReport, getReports } from "../services/report.service";
+import {
+  checkReportJobStatus,
+  createReport,
+  deleteReport,
+  getReports,
+} from "../services/report.service";
+import { toast } from "sonner";
+import { ThemeToggle } from "../../ui/ThemeToggle";
+import { DashboardSkeleton } from "../../ui/Skeleton";
 
 type Resume = {
   id: string;
@@ -42,6 +50,12 @@ function resumeLabel(url: string) {
   return url.split("/").pop()?.replace(/^\d+-/, "") ?? "Resume";
 }
 
+function getScoreColor(score: number): string {
+  if (score >= 75) return "#16a34a"; // green
+  if (score >= 50) return "#ca8a04"; // amber
+  return "#dc2626"; // red
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, handleLogout } = useAuth();
@@ -65,34 +79,45 @@ const Dashboard = () => {
   const [jobUrl, setJobUrl] = useState("");
 
   const [isLinkedInUrl, setIsLinkedInUrl] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const [error, setError] = useState<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     async function fetchAll() {
-      const [resumeData, jobData, reportData] = await Promise.all([
-        getResumes(),
-        getJobs(),
-        getReports(),
-      ]);
-      setResumes(resumeData.resumes ?? []);
-      setJobs(jobData.jobs ?? []);
-      setReports(reportData.reports ?? []);
+      try {
+        const [resumeData, jobData, reportData] = await Promise.all([
+          getResumes(),
+          getJobs(),
+          getReports(),
+        ]);
+        setResumes(resumeData.resumes ?? []);
+        setJobs(jobData.jobs ?? []);
+        setReports(reportData.reports ?? []);
+      } catch {
+        toast.error("Failed to load dashboard data. Please refresh.");
+      } finally {
+        setInitialLoading(false);
+      }
     }
     fetchAll();
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, []);
 
   async function handleResumeUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingResume(true);
-    setError(null);
     try {
       await uploadResume(file);
       const data = await getResumes();
       setResumes(data.resumes ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload resume");
+      toast.success("Resume uploaded successfully");
+    } catch {
+      toast.error("Failed to upload resume");
     } finally {
       setUploadingResume(false);
       e.target.value = "";
@@ -104,15 +129,15 @@ const Dashboard = () => {
       await deleteResume(id);
       setResumes((prev) => prev.filter((r) => r.id !== id));
       if (selectedResumeId === id) setSelectedResumeId(null);
+      toast.success("Resume deleted");
     } catch {
-      setError("Failed to delete resume");
+      toast.error("Failed to delete resume");
     }
   }
 
   async function handleAddJob(e: React.FormEvent) {
     e.preventDefault();
     setAddingJob(true);
-    setError(null);
     try {
       await createJob({
         title: jobTitle || undefined,
@@ -126,8 +151,9 @@ const Dashboard = () => {
       setJobCompany("");
       setJobDescription("");
       setJobUrl("");
+      toast.success("Job saved successfully");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add job");
+      toast.error(err instanceof Error ? err.message : "Failed to add job");
     } finally {
       setAddingJob(false);
     }
@@ -138,24 +164,68 @@ const Dashboard = () => {
       await deleteJob(id);
       setJobs((prev) => prev.filter((j) => j.id !== id));
       if (selectedJobId === id) setSelectedJobId(null);
+      toast.success("Job deleted");
     } catch {
-      setError("Failed to delete job");
+      toast.error("Failed to delete job");
     }
   }
 
   async function handleAnalyze() {
     if (!selectedResumeId || !selectedJobId) return;
     setAnalyzing(true);
-    setError(null);
+
+    const toastId = toast.loading("Starting analysis...");
+
     try {
       const data = await createReport(selectedResumeId, selectedJobId);
-      navigate({
-        to: "/report/$reportId",
-        params: { reportId: data.report.id },
+      const jobId = data.jobId;
+
+      toast.loading("Analysing your resume, this may take a moment...", {
+        id: toastId,
       });
+
+      pollingRef.current = setInterval(async () => {
+        try {
+          const status = await checkReportJobStatus(jobId);
+
+          if (status.state === "completed" && status.reportId) {
+            clearInterval(pollingRef.current!);
+            pollingRef.current = null;
+            toast.success("Analysis complete!", { id: toastId });
+            setAnalyzing(false);
+            navigate({
+              to: "/report/$reportId",
+              params: { reportId: status.reportId },
+            });
+          } else if (status.state === "failed") {
+            clearInterval(pollingRef.current!);
+            pollingRef.current = null;
+            toast.error("Analysis failed. Please try again.", { id: toastId });
+            setAnalyzing(false);
+          }
+        } catch {
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+          toast.error("Could not check analysis status.", { id: toastId });
+          setAnalyzing(false);
+        }
+      }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Analysis failed");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to start analysis",
+        { id: toastId },
+      );
       setAnalyzing(false);
+    }
+  }
+
+  async function handleDeleteReport(id: string) {
+    try {
+      await deleteReport(id);
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Report deleted");
+    } catch {
+      toast.error("Failed to delete report");
     }
   }
 
@@ -163,6 +233,8 @@ const Dashboard = () => {
     await handleLogout();
     navigate({ to: "/login" });
   }
+
+  if (initialLoading) return <DashboardSkeleton />;
 
   return (
     <div className="min-h-screen bg-background text-foreground text-left">
@@ -174,6 +246,7 @@ const Dashboard = () => {
             <span className="text-primary">Mind</span>
           </span>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <span className="text-sm text-muted-foreground">
               Welcome,{" "}
               <span className="text-foreground font-medium">
@@ -191,12 +264,6 @@ const Dashboard = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-10">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
-            {error}
-          </div>
-        )}
-
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           {/* ── STEP 1: RESUMES ── */}
           <section className="card space-y-4">
@@ -601,6 +668,72 @@ const Dashboard = () => {
                   {reports.map((report) => (
                     <div
                       key={report.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-border hover:bg-surface
+  cursor-pointer transition-colors"
+                    >
+                      <div
+                        className="flex items-center gap-3 min-w-0 flex-1"
+                        onClick={() =>
+                          navigate({
+                            to: "/report/$reportId",
+                            params: { reportId: report.id },
+                          })
+                        }
+                      >
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            background: `conic-gradient(${getScoreColor(report.score)} ${report.score}%, var(--color-border) 0)`,
+                          }}
+                        >
+                          <div className="w-7 h-7 rounded-full bg-card flex items-center justify-center">
+                            <span
+                              className="text-xs font-black"
+                              style={{ color: getScoreColor(report.score) }}
+                            >
+                              {report.score}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {report.job.title ?? "Untitled Job"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {report.job.company
+                              ? `${report.job.company} · `
+                              : ""}
+                            {formatDate(report.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className="text-primary text-sm"
+                          onClick={() =>
+                            navigate({
+                              to: "/report/$reportId",
+                              params: { reportId: report.id },
+                            })
+                          }
+                        >
+                          →
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteReport(report.id);
+                          }}
+                          className="text-muted-foreground hover:text-red-500 transition-colors text-xs px-2 py-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {/* {reports.map((report) => (
+                    <div
+                      key={report.id}
                       onClick={() =>
                         navigate({
                           to: "/report/$reportId",
@@ -613,8 +746,7 @@ const Dashboard = () => {
                         <div
                           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                           style={{
-                            background: `conic-gradient(var(--color-primary) ${report.score}%, var(--color-border)
-  0)`,
+                            background: `conic-gradient(var(--color-primary) ${report.score}%, var(--color-border) 0)`,
                           }}
                         >
                           <div className="w-7 h-7 rounded-full bg-card flex items-center justify-center">
@@ -637,7 +769,7 @@ const Dashboard = () => {
                       </div>
                       <span className="text-primary text-sm shrink-0">→</span>
                     </div>
-                  ))}
+                  ))} */}
                 </div>
               )}
             </div>

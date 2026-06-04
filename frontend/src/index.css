@@ -41,7 +41,7 @@
   --color-accent: hsl(160 70% 45%);
 
   --color-card: hsl(222 40% 15%);
-  --color-surface: hsl(210 40% 96%);
+  --color-surface: hsl(222 40% 20%);
 }
 
 /* ================= BASE ================= */
@@ -103,6 +103,9 @@
     background-color: hsl(210 40% 90%);
     color: var(--color-primary);
   }
+  .skeleton {
+    @apply rounded-xl animate-pulse bg-border;
+  }
 
   .input {
     @apply w-full bg-transparent border-b outline-none py-3;
@@ -134,6 +137,15 @@
 
   .footer-link {
     color: var(--color-primary);
+  }
+}
+
+@keyframes shimmer-sweep {
+  from {
+    transform: translateX(-150%) skewX(-12deg);
+  }
+  to {
+    transform: translateX(350%) skewX(-12deg);
   }
 }
 

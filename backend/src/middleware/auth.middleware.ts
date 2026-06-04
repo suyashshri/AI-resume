@@ -8,7 +8,7 @@ async function authoriseUser(req: Request, res: Response, next: NextFunction) {
   const token = req.cookies.token;
 
   if (!token) {
-    return res.status(400).json({
+    return res.status(401).json({
       message: "Missing Token",
     });
   }
@@ -16,7 +16,7 @@ async function authoriseUser(req: Request, res: Response, next: NextFunction) {
   const isBlacklisted = await redisClient.get(token);
 
   if (isBlacklisted) {
-    return res.status(400).json({
+    return res.status(401).json({
       message: "Token Expired! Please sign in",
     });
   }
