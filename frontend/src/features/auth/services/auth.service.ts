@@ -1,10 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios, { AxiosError } from "axios";
-
-const api = axios.create({
-  baseURL: "http://localhost:3000",
-  withCredentials: true,
-});
+import type { AxiosError } from "axios";
+import api from "../../../lib/api";
 
 export async function register({
   username,

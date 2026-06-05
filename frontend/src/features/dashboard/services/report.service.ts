@@ -1,9 +1,4 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: "http://localhost:3000",
-  withCredentials: true,
-});
+import api from "../../../lib/api";
 
 export async function createReport(resumeId: string, jobId: string) {
   const response = await api.post("/api/report", { resumeId, jobId });
@@ -46,13 +41,11 @@ export async function streamCoverLetter(
   onDone: () => void,
   onError: (msg: string) => void,
 ) {
-  const response = await fetch(
-    `http://localhost:3000/api/report/${id}/cover-letter`,
-    {
-      method: "GET",
-      credentials: "include",
-    },
-  );
+  const base = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const response = await fetch(`${base}/api/report/${id}/cover-letter`, {
+    method: "GET",
+    credentials: "include",
+  });
 
   if (!response.ok || !response.body) {
     onError("Failed to start cover letter generation");
