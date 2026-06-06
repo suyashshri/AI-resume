@@ -102,3 +102,27 @@ export async function logout() {
     // ignore
   }
 }
+
+export async function updateProfile({ username }: { username: string }) {
+  const response = await api.patch("/api/auth/profile", { username });
+  return response.data;
+}
+
+export async function changePassword({
+  currentPassword,
+  newPassword,
+}: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const response = await api.patch("/api/auth/change-password", {
+    currentPassword,
+    newPassword,
+  });
+  return response.data;
+}
+
+export async function deleteAccount() {
+  const response = await api.delete("/api/auth/account");
+  return response.data;
+}

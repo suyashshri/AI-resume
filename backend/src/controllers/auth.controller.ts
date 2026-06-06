@@ -19,7 +19,7 @@ function setJwtCookie(res: Response, userId: string, username: string) {
   res.cookie("token", token, {
     httpOnly: true,
     secure: config.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: config.NODE_ENV === "production" ? "none" : "strict",
     maxAge: 24 * 60 * 60 * 1000,
   });
   return token;
