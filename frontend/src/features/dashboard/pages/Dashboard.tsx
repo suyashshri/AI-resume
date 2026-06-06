@@ -265,9 +265,6 @@ const Dashboard = () => {
             >
               Log Out
             </button>
-            {showProfile && (
-              <ProfileModal onClose={() => setShowProfile(false)} />
-            )}
           </div>
         </div>
       </nav>
@@ -783,6 +780,9 @@ const Dashboard = () => {
               )}
             </div>
           </section>
+          {showProfile && (
+            <ProfileModal onClose={() => setShowProfile(false)} />
+          )}
         </div>
       </main>
     </div>
