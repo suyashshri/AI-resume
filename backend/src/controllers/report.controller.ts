@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../db/singleton";
 import openrouter from "../lib/openrouter";
-import { CreateReport, ClaudeReport } from "../types/report.type";
+import { CreateReport } from "../types/report.type";
 import { reportQueue } from "../lib/reportQueue";
 
 async function createReportController(req: Request, res: Response) {
