@@ -34,9 +34,10 @@ async function registerUserController(req: Request, res: Response) {
   try {
     const parsedData = RegisterUser.safeParse(req.body);
     if (!parsedData.success) {
-      return res.status(400).json({
-        message: "Please provide username, email and password",
-      });
+      const message =
+        parsedData.error.issues[0]?.message ??
+        "Please enter a valid Username,email and password";
+      return res.status(400).json({ message });
     }
 
     const { username, email, password } = parsedData.data;
@@ -151,9 +152,10 @@ async function loginUserController(req: Request, res: Response) {
   try {
     const parsedData = LoginUser.safeParse(req.body);
     if (!parsedData.success) {
-      return res.status(400).json({
-        message: "Please enter a valid email and password",
-      });
+      const message =
+        parsedData.error.issues[0]?.message ??
+        "Please enter a valid email and password";
+      return res.status(400).json({ message });
     }
 
     const { email, password } = parsedData.data;
@@ -310,9 +312,17 @@ async function changePasswordController(req: Request, res: Response) {
 async function deleteAccountController(req: Request, res: Response) {
   try {
     const userId = req.user!.id;
+    const token = req.cookies.token;
 
     await prisma.user.delete({ where: { id: userId } });
 
+    const decoded = jwt.decode(token) as { exp: number };
+    const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+    if (ttl > 0) {
+      await redisClient.set(token, "blacklisted", {
+        expiration: { type: "EX", value: ttl },
+      });
+    }
     res.clearCookie("token");
     return res.status(200).json({ message: "Account deleted" });
   } catch (error) {

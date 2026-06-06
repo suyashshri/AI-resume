@@ -11,7 +11,15 @@ async function uploadResumeController(req: Request, res: Response) {
   }
 
   const userId = req.user?.id;
-  const storagePath = `${userId}/${Date.now()}-${file.originalname}`;
+
+  const resumeCount = await prisma.resume.count({ where: { userId } });
+  if (resumeCount >= 4) {
+    return res.status(400).json({
+      message: "Maximum of 3 resumes allowed. Delete one to upload a new one.",
+    });
+  }
+  const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `${userId}/${Date.now()}-${safeName}`;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthenticated Request" });

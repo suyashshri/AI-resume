@@ -1,10 +1,19 @@
+import type { AxiosError } from "axios";
 import api from "../../../lib/api";
 
 export async function uploadResume(file: File) {
   const formData = new FormData();
   formData.append("resume", file);
-  const response = await api.post("/api/resume", formData);
-  return response.data;
+  try {
+    const response = await api.post("/api/resume", formData);
+    return response.data;
+  } catch (error) {
+    const message =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((error as AxiosError).response?.data as any)?.message ||
+      "Failed to upload resume";
+    throw new Error(message);
+  }
 }
 
 export async function getResumes() {

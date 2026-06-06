@@ -100,7 +100,7 @@ const Landing = () => {
               Stories
             </a>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <Link
@@ -193,7 +193,7 @@ const Landing = () => {
                 {/* Score donut */}
                 <div className="flex items-center gap-5">
                   <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center flex-shrink-0"
+                    className="w-20 h-20 rounded-full flex items-center justify-center shrink-0"
                     style={{
                       background:
                         "conic-gradient(var(--color-primary) 87%, var(--color-border) 0)",
@@ -348,8 +348,7 @@ const Landing = () => {
                   </p>
                   <div className="flex items-center gap-3 pt-3 border-t border-border">
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white
-  flex-shrink-0"
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                       style={{ backgroundColor: "var(--color-primary)" }}
                     >
                       {t.initials}

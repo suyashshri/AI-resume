@@ -119,8 +119,10 @@ const Dashboard = () => {
       const data = await getResumes();
       setResumes(data.resumes ?? []);
       toast.success("Resume uploaded successfully");
-    } catch {
-      toast.error("Failed to upload resume");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to upload resume",
+      );
     } finally {
       setUploadingResume(false);
       e.target.value = "";

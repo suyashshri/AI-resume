@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { toast } from "sonner";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -12,6 +13,18 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (username.trim().length < 3) {
+      return toast.error("Username must be at least 3 characters");
+    }
+    if (username.trim().length > 30) {
+      return toast.error("Username must be at most 30 characters");
+    }
+    if (password.length < 8) {
+      return toast.error("Password must be at least 8 characters");
+    }
+    if (password.length > 30) {
+      return toast.error("Password is too long");
+    }
     try {
       await handleRegister({ username, email, password });
       navigate({ to: "/verify-otp", search: { email } });
