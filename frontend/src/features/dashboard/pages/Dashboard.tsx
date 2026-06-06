@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { DashboardSkeleton } from "../../ui/Skeleton";
+import { ProfileModal } from "../../auth/pages/ProfileModal";
 
 type Resume = {
   id: string;
@@ -80,6 +81,8 @@ const Dashboard = () => {
 
   const [isLinkedInUrl, setIsLinkedInUrl] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+
+  const [showProfile, setShowProfile] = useState(false);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -247,18 +250,24 @@ const Dashboard = () => {
           </span>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <span className="text-sm text-muted-foreground">
+            <button
+              onClick={() => setShowProfile(true)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Welcome,{" "}
-              <span className="text-foreground font-medium">
+              <span className="text-foreground font-medium underline-offset-2 hover:underline">
                 {user?.username}
               </span>
-            </span>
+            </button>
             <button
               onClick={onLogout}
               className="text-sm border border-border px-4 py-1.5 rounded-full hover:bg-surface transition-colors"
             >
               Log Out
             </button>
+            {showProfile && (
+              <ProfileModal onClose={() => setShowProfile(false)} />
+            )}
           </div>
         </div>
       </nav>

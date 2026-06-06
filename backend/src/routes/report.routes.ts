@@ -14,7 +14,7 @@ import rateLimit from "express-rate-limit";
 
 const aiLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 5,
+  max: 3,
   keyGenerator: (req) => req.user!.id,
   message: { message: "Too many AI requests. Please try again in 5 minutes." },
   standardHeaders: true,
