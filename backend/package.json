@@ -14,6 +14,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
+    "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.20.0",
     "prisma": "^7.7.0"
   },
@@ -36,10 +37,10 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "openai": "^6.39.1",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",
     "redis": "^5.12.1",
     "resend": "^6.12.4",
-    "unpdf": "^1.6.2",
     "zod": "^4.3.6"
   }
 }

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../db/singleton";
 import supabase from "../lib/supabase";
-import { extractText, getDocumentProxy } from "unpdf";
+import { PDFParse } from "pdf-parse";
 
 async function uploadResumeController(req: Request, res: Response) {
   const file = req.file;
@@ -28,8 +28,10 @@ async function uploadResumeController(req: Request, res: Response) {
   try {
     // Extract text from PDF
     const buffer = new Uint8Array(file.buffer);
-    const pdf = await getDocumentProxy(buffer);
-    const { text } = await extractText(pdf, { mergePages: true });
+    const data = new PDFParse(buffer);
+    const text = (await data.getText()).text;
+
+    console.log("texttexttexttext", text);
 
     // Upload to Supabase private bucket
     const { error } = await supabase.storage
@@ -59,6 +61,11 @@ async function uploadResumeController(req: Request, res: Response) {
     });
   } catch (error) {
     console.error("UploadResume error:", error);
+    if (error instanceof Error && error.message === "PDF parsing timed out") {
+      return res
+        .status(400)
+        .json({ message: "PDF is too complex to process. Try a simpler PDF." });
+    }
     return res.status(500).json({ message: "Something went wrong" });
   }
 }
