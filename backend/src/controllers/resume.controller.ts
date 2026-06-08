@@ -140,6 +140,23 @@ async function deleteResumeController(req: Request, res: Response) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
+    const reports = await prisma.report.findMany({
+      where: { resumeId: id },
+      select: { id: true },
+    });
+
+    const reportIds = reports.map((r) => r.id);
+
+    if (reportIds.length > 0) {
+      await prisma.$transaction([
+        prisma.skillGap.deleteMany({ where: { reportId: { in: reportIds } } }),
+        prisma.technicalQuestion.deleteMany({
+          where: { reportId: { in: reportIds } },
+        }),
+        prisma.report.deleteMany({ where: { id: { in: reportIds } } }),
+      ]);
+    }
+
     if (resume.resumeUrl) {
       await supabase.storage.from("resumes").remove([resume.resumeUrl]);
     }

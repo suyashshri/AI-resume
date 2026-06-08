@@ -314,7 +314,23 @@ async function deleteAccountController(req: Request, res: Response) {
     const userId = req.user!.id;
     const token = req.cookies.token;
 
-    await prisma.user.delete({ where: { id: userId } });
+    const reports = await prisma.report.findMany({
+      where: { userId },
+      select: { id: true },
+    });
+
+    const reportIds = reports.map((r) => r.id);
+
+    await prisma.$transaction([
+      prisma.skillGap.deleteMany({ where: { reportId: { in: reportIds } } }),
+      prisma.technicalQuestion.deleteMany({
+        where: { reportId: { in: reportIds } },
+      }),
+      prisma.report.deleteMany({ where: { userId } }),
+      prisma.resume.deleteMany({ where: { userId } }),
+      prisma.job.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
 
     const decoded = jwt.decode(token) as { exp: number };
     const ttl = decoded.exp - Math.floor(Date.now() / 1000);
