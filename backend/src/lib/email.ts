@@ -10,7 +10,7 @@ export async function sendOtpEmail(email: string, otp: string) {
   }
 
   await resend.emails.send({
-    from: "HireMind <onboarding@resend.dev>",
+    from: "HireMind <noreply@codexyash.com>",
     to: [email],
     subject: "Your HireMind verification code",
     html: `
