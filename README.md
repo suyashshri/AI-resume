@@ -55,7 +55,7 @@ Make sure you have these installed:
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/ai-resume.git
+git clone https://github.com/suyashshri/ai-resume.git
 cd ai-resume
 ```
 
